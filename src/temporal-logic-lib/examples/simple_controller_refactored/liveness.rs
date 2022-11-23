@@ -89,6 +89,11 @@ proof fn lemma_msg_inv()
             always(lift_state(msg_inv()))
         ),
 {
+    // F:
+    assert(forall |s: T| state_pred_call(init, s) ==> msg_inv(s));
+    assert(forall |s, s_prime: T| msg_inv(s) && action_pred_call(next, s, s_prime) ==> msg_inv(s_prime));
+
+    // temporal:
     init_invariant::<CState>(sm_spec(), init(), next(), msg_inv());
 }
 
@@ -142,18 +147,11 @@ proof fn lemma_obj1_exists_leads_to_obj2_exists()
                 .leads_to(lift_state(obj2_exists()))
         ),
 {
-    leads_to_weaken_lite_auto::<CState>(sm_spec());
+    // temporal:
 
-    /*
-     * With `lemma_premise1_leads_to_obj2_exists` and `lemma_premise2_leads_to_obj2_exists`,
-     * things become much easier here.
-     */
+    leads_to_weaken_lite_auto::<CState>(sm_spec());
     lemma_obj1_exists_and_not_sent2_leads_to_obj2_exists();
     lemma_obj1_exists_and_sent2_leads_to_obj2_exists();
-
-    /*
-     * We will combine the two premises together with or using `leads_to_combine`.
-     */
     leads_to_combine::<CState>(sm_spec(), obj1_exists(), obj2_exists(), sent2());
 }
 
@@ -161,13 +159,8 @@ proof fn lemma_eventually_obj1_exists()
     ensures
         sm_spec().entails(eventually(lift_state(obj1_exists()))),
 {
-    /*
-     * This proof is simple: just take the leads_to from `lemma_init_leads_to_obj1_exists`
-     * and use `leads_to_apply` rule to get eventually from leads_to.
-     */
-
+    // temporal:
     lemma_init_leads_to_obj1_exists();
-
     leads_to_apply::<CState>(sm_spec(), init(), obj1_exists());
 }
 
@@ -175,19 +168,10 @@ proof fn lemma_eventually_obj2_exits()
     ensures
         sm_spec().entails(eventually(lift_state(obj2_exists()))),
 {
-    /*
-     * This proof is also simple: just take the two leads_to
-     * from `lemma_init_leads_to_obj1_exists` and `lemma_obj1_exists_leads_to_obj2_exists`,
-     * connect them together with `leads_to_trans` rule
-     * and use `leads_to_apply` rule to get eventually from leads_to.
-     */
-
+    // temporal:
     lemma_init_leads_to_obj1_exists();
-
     lemma_obj1_exists_leads_to_obj2_exists();
-
     leads_to_trans::<CState>(sm_spec(), init(), obj1_exists(), obj2_exists());
-
     leads_to_apply::<CState>(sm_spec(), init(), obj2_exists());
 }
 
@@ -195,29 +179,14 @@ proof fn liveness()
     ensures
         sm_spec().entails(eventually(lift_state(obj1_exists()).and(lift_state(obj2_exists())))),
 {
-    /*
-     * This proof needs the safety property we proved in safety.rs
-     * which says always obj2's existence implies obj1's existence.
-     *
-     * The proof itself is very intuitive:
-     * if you have eventually obj2 exists,
-     * and you have always obj2's existence implies obj1's existence,
-     * then when obj2 exists, obj1 is also there.
-     *
-     * We use `always_and_eventually` rule to combine
-     * the eventually from `lemma_eventually_obj2_exits` and the always from `safety`
-     * to one eventually.
-     */
 
+    // F:
+    inductive(inductive_inv);
+
+    // temporal:
     lemma_eventually_obj2_exits();
-
     safety();
-
     always_and_eventually::<CState>(sm_spec(), order_inv(), obj2_exists());
-
-    /*
-     * We get a weaker eventually, which is our goal, from `eventually_weaken`.
-     */
     eventually_weaken_auto::<CState>(sm_spec());
 }
 
