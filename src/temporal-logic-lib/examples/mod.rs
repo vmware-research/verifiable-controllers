@@ -7,3 +7,4 @@ pub mod simple_controller;
 
 // "D-F-temporal" refactored versions:
 pub mod abc_state_machine_refactored;
+pub mod simple_controller_refactored;

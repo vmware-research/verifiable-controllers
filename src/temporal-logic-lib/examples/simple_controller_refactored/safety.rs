@@ -1,7 +1,7 @@
 // Copyright 2022 VMware, Inc.
 // SPDX-License-Identifier: MIT
 #![allow(unused_imports)]
-use crate::examples::simple_controller::state_machine::*;
+use crate::examples::simple_controller_refactored::state_machine::*;
 use crate::temporal_logic::*;
 use builtin::*;
 use builtin_macros::*;
@@ -15,7 +15,7 @@ pub open spec fn msg_inv() -> StatePred<CState> {
     }
 }
 
-spec fn obj1_inv() -> StatePred<CState> {
+pub open spec fn obj1_inv() -> StatePred<CState> {
     |s: CState| {
         &&& s.sent_2_create ==> s.obj_1_exists
         &&& s.obj_1_exists ==> s.sent_1_create
@@ -26,7 +26,7 @@ pub open spec fn order_inv() -> StatePred<CState> {
     |s: CState| s.obj_2_exists ==> s.obj_1_exists
 }
 
-spec fn inductive_inv() -> StatePred<CState> {
+pub open spec fn inductive_inv() -> StatePred<CState> {
     |s: CState| {
         &&& msg_inv()(s)
         &&& obj1_inv()(s)

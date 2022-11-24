@@ -1,8 +1,8 @@
 // Copyright 2022 VMware, Inc.
 // SPDX-License-Identifier: MIT
 #![allow(unused_imports)]
-use crate::examples::simple_controller::safety::*;
-use crate::examples::simple_controller::state_machine::*;
+use crate::examples::simple_controller_refactored::safety::*;
+use crate::examples::simple_controller_refactored::state_machine::*;
 use crate::temporal_logic::*;
 use builtin::*;
 use builtin_macros::*;
@@ -41,10 +41,10 @@ proof fn lemma_init_leads_to_obj1_exists()
     create1_enabled();
 
     // F:
-    assert(forall |s, s_prime: T| send1_pre()(s) && action_pred_call(next, s, s_prime) ==> send1_pre()(s_prime) || create1_pre()(s_prime));
-    assert(forall |s, s_prime: T| send1_pre()(s) && action_pred_call(next, s, s_prime) && reconcile()(s, s_prime) ==> create1_pre()(s_prime));
-    assert(forall |s, s_prime: T| create1_pre()(s) && action_pred_call(next, s, s_prime) ==> create1_pre()(s_prime) || obj1_exists()(s_prime));
-    assert(forall |s, s_prime: T| create1_pre()(s) && action_pred_call(next, s, s_prime) && create1()(s, s_prime) ==> obj1_exists()(s_prime));
+    assert(forall |s, s_prime| send1_pre()(s) && action_pred_call(next(), s, s_prime) ==> send1_pre()(s_prime) || create1_pre()(s_prime));
+    assert(forall |s, s_prime| send1_pre()(s) && action_pred_call(next(), s, s_prime) && reconcile()(s, s_prime) ==> create1_pre()(s_prime));
+    assert(forall |s, s_prime| create1_pre()(s) && action_pred_call(next(), s, s_prime) ==> create1_pre()(s_prime) || obj1_exists()(s_prime));
+    assert(forall |s, s_prime| create1_pre()(s) && action_pred_call(next(), s, s_prime) && create1()(s, s_prime) ==> obj1_exists()(s_prime));
     
     // temporal:
     leads_to_weaken_lite_auto::<CState>(sm_spec());
@@ -66,10 +66,10 @@ proof fn lemma_obj1_exists_and_not_sent2_leads_to_obj2_exists()
     create2_enabled();
 
     // F:
-    assert(forall |s, s_prime: T| send2_pre()(s) && action_pred_call(next, s, s_prime) ==> send2_pre()(s_prime) || create2_pre()(s_prime));
-    assert(forall |s, s_prime: T| send2_pre()(s) && action_pred_call(next, s, s_prime) && reconcile()(s, s_prime) ==> create2_pre()(s_prime));
-    assert(forall |s, s_prime: T| create2_pre()(s) && action_pred_call(next, s, s_prime) ==> create2_pre()(s_prime) || obj2_exists()(s_prime));
-    assert(forall |s, s_prime: T| create2_pre()(s) && action_pred_call(next, s, s_prime) && create2()(s, s_prime) ==> obj2_exists()(s_prime));
+    assert(forall |s, s_prime| send2_pre()(s) && action_pred_call(next(), s, s_prime) ==> send2_pre()(s_prime) || create2_pre()(s_prime));
+    assert(forall |s, s_prime| send2_pre()(s) && action_pred_call(next(), s, s_prime) && reconcile()(s, s_prime) ==> create2_pre()(s_prime));
+    assert(forall |s, s_prime| create2_pre()(s) && action_pred_call(next(), s, s_prime) ==> create2_pre()(s_prime) || obj2_exists()(s_prime));
+    assert(forall |s, s_prime| create2_pre()(s) && action_pred_call(next(), s, s_prime) && create2()(s, s_prime) ==> obj2_exists()(s_prime));
     
     // temporal:
     leads_to_weaken_lite_auto::<CState>(sm_spec());
@@ -90,8 +90,8 @@ proof fn lemma_msg_inv()
         ),
 {
     // F:
-    assert(forall |s: T| state_pred_call(init, s) ==> msg_inv(s));
-    assert(forall |s, s_prime: T| msg_inv(s) && action_pred_call(next, s, s_prime) ==> msg_inv(s_prime));
+    assert(forall |s| state_pred_call(init(), s) ==> msg_inv()(s));
+    assert(forall |s, s_prime| msg_inv()(s) && action_pred_call(next(), s, s_prime) ==> msg_inv()(s_prime));
 
     // temporal:
     init_invariant::<CState>(sm_spec(), init(), next(), msg_inv());
@@ -110,8 +110,8 @@ proof fn lemma_obj1_exists_and_sent2_leads_to_obj2_exists()
 
     // F:
     // 2 lines from above
-    assert(forall |s: T| state_pred_call(init, s) ==> inv(s));
-    assert(forall |s, s_prime: T| msg_inv(s) && action_pred_call(next, s, s_prime) ==> msg_inv(s_prime));
+    assert(forall |s| state_pred_call(init(), s) ==> msg_inv()(s));
+    assert(forall |s, s_prime| msg_inv()(s) && action_pred_call(next(), s, s_prime) ==> msg_inv()(s_prime));
 
     // temporal:
     leads_to_weaken_lite_auto::<CState>(sm_spec());
@@ -181,7 +181,8 @@ proof fn liveness()
 {
 
     // F:
-    inductive(inductive_inv);
+    assert(forall |s| state_pred_call(init(), s) ==> inductive_inv()(s));
+    assert(forall |s, s_prime| inductive_inv()(s) && action_pred_call(next(), s, s_prime) ==> inductive_inv()(s_prime));
 
     // temporal:
     lemma_eventually_obj2_exits();
