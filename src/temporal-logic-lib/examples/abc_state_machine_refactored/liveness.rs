@@ -19,14 +19,12 @@ proof fn eventually_c()
     b_c_enabled();
 
     // F:
-    assert(forall |s, s_prime: T| a()(s) && action_pred_call(next, s, s_prime) ==> a()(s_prime) || b()(s_prime));
-    assert(forall |s, s_prime: T| a()(s) && action_pred_call(next, s, s_prime) && a_b()(s, s_prime) ==> b()(s_prime));
-    assert(forall |s, s_prime: T| b()(s) && action_pred_call(next, s, s_prime) ==> b()(s_prime) || c()(s_prime));
-    assert(forall |s, s_prime: T| b()(s) && action_pred_call(next, s, s_prime) && b_()(s, s_prime) ==> c()(s_prime));
+    assert(forall |s, s_prime| a()(s) && action_pred_call(next(), s, s_prime) ==> a()(s_prime) || b()(s_prime));
+    assert(forall |s, s_prime| a()(s) && action_pred_call(next(), s, s_prime) && a_b()(s, s_prime) ==> b()(s_prime));
+    assert(forall |s, s_prime| b()(s) && action_pred_call(next(), s, s_prime) ==> b()(s_prime) || c()(s_prime));
+    assert(forall |s, s_prime| b()(s) && action_pred_call(next(), s, s_prime) && b_c()(s, s_prime) ==> c()(s_prime));
 
-    ptl();
-
-    // F => phi:     
+    // temporal:
     wf1::<SimpleState>(sm_spec(), next(), a_b(), a(), b());
     wf1::<SimpleState>(sm_spec(), next(), b_c(), b(), c());
     leads_to_trans::<SimpleState>(sm_spec(), a(), b(), c());
