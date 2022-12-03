@@ -1,7 +1,7 @@
 // Copyright 2022 VMware, Inc.
 // SPDX-License-Identifier: MIT
 #![allow(unused_imports)]
-use crate::examples::compound_state_machine::{
+use crate::examples::compound_state_machine_refactored::{
     common::*,
     controller, distributed_system,
     distributed_system::{message_sent, next, resource_exists, sm_spec, State},
@@ -181,17 +181,26 @@ proof fn lemma_controller_create_cr_resp_leads_to_create_sts_req(msg: Message)
         name: msg.get_CreateResponse_0().obj.key.name + sts_suffix(),
         kind: ResourceKind::StatefulSetKind
     });
+    let pre = distributed_system::controller_next().step_pre(controller::Step::SendCreateStsStep, Option::Some(msg));
+    let post = message_sent(create_sts_req_msg);
+    let forward = distributed_system::controller_next().forward(Option::Some(msg));
 
-    leads_to_eq_auto::<State>(sm_spec());
-    use_tla_forall::<State, Option<Message>>(sm_spec(), |recv| weak_fairness(distributed_system::controller_next().forward(recv)), Option::Some(msg));
 
+    // D:
     distributed_system::controller_step_enabled(controller::Step::SendCreateStsStep, Option::Some(msg));
 
+    // F:
+    assert(forall |s, s_prime| pre(s) && action_pred_call(next(), s, s_prime) ==> pre(s_prime) || post(s_prime));
+    assert(forall |s, s_prime| pre(s) && action_pred_call(next(), s, s_prime) && forward(s, s_prime) ==> post(s_prime));
+    use_tla_forall::<State, Option<Message>>(sm_spec(), |recv| weak_fairness(distributed_system::controller_next().forward(recv)), Option::Some(msg));
+
+    // temporal:
+    leads_to_eq_auto::<State>(sm_spec());
     wf1::<State>(sm_spec(),
         next(),
-        distributed_system::controller_next().forward(Option::Some(msg)),
-        distributed_system::controller_next().step_pre(controller::Step::SendCreateStsStep, Option::Some(msg)),
-        message_sent(create_sts_req_msg),
+        forward,
+        pre,
+        post
     );
 }
 

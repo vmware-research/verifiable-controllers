@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 #![allow(unused_imports)]
 use crate::common::*;
-use crate::examples::compound_state_machine::{
+use crate::examples::compound_state_machine_refactored::{
     common::*,
     distributed_system::{init, message_sent, next, resource_exists, sm_spec, State},
 };

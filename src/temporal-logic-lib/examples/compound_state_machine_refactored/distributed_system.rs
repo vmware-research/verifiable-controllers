@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 #![allow(unused_imports)]
 use crate::action::*;
-use crate::examples::compound_state_machine::{
+use crate::examples::compound_state_machine_refactored::{
     client, client::client, common::*, controller, controller::controller, kubernetes_api,
     kubernetes_api::kubernetes_api, network, network::network,
 };

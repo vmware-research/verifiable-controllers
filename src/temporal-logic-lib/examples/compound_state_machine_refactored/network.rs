@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 #![allow(unused_imports)]
 use crate::action::*;
-use crate::examples::compound_state_machine::common::*;
+use crate::examples::compound_state_machine_refactored::common::*;
 use crate::pervasive::{option::*, set::*};
 use crate::state_machine::*;
 use crate::temporal_logic::*;

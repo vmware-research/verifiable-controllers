@@ -1,7 +1,7 @@
 // Copyright 2022 VMware, Inc.
 // SPDX-License-Identifier: MIT
 #![allow(unused_imports)]
-use crate::examples::compound_state_machine::{
+use crate::examples::compound_state_machine_refactored::{
     common::*,
     distributed_system,
     distributed_system::{message_sent, next, resource_exists, sm_spec, State},
@@ -22,15 +22,25 @@ pub proof fn lemma_create_req_leads_to_create_resp(msg: Message)
             lift_state(message_sent(msg)).leads_to(lift_state(message_sent(create_resp_msg(msg.get_CreateRequest_0().obj.key))))
         ),
 {
-    leads_to_eq_auto::<State>(sm_spec());
+    let pre = distributed_system::kubernetes_api_next().step_pre(kubernetes_api::Step::HandleRequest, Option::Some(msg));
+    let post = message_sent(create_resp_msg(msg.get_CreateRequest_0().obj.key));
+    let forward = distributed_system::kubernetes_api_next().forward(Option::Some(msg));
+
+    // D:
+    distributed_system::kubernetes_api_step_enabled(kubernetes_api::Step::HandleRequest, Option::Some(msg));
+
+    // F:
+    assert(forall |s, s_prime| pre(s) && action_pred_call(next(), s, s_prime) ==> pre(s_prime) || post(s_prime));
+    assert(forall |s, s_prime| pre(s) && action_pred_call(next(), s, s_prime) && forward(s, s_prime) ==> post(s_prime));
     use_tla_forall::<State, Option<Message>>(sm_spec(), |recv| weak_fairness(distributed_system::kubernetes_api_next().forward(recv)), Option::Some(msg));
 
-    distributed_system::kubernetes_api_step_enabled(kubernetes_api::Step::HandleRequest, Option::Some(msg));
+    // temporal:
+    leads_to_eq_auto::<State>(sm_spec());
     wf1::<State>(sm_spec(),
         next(),
-        distributed_system::kubernetes_api_next().forward(Option::Some(msg)),
-        distributed_system::kubernetes_api_next().step_pre(kubernetes_api::Step::HandleRequest, Option::Some(msg)),
-        message_sent(create_resp_msg(msg.get_CreateRequest_0().obj.key)),
+        forward,
+        pre,
+        post,
     );
 }
 
@@ -42,15 +52,25 @@ pub proof fn lemma_delete_req_leads_to_res_not_exists(msg: Message)
             lift_state(message_sent(msg)).leads_to(lift_state(|s| !resource_exists(msg.get_DeleteRequest_0().key)(s)))
         ),
 {
-    leads_to_eq_auto::<State>(sm_spec());
+    let pre = distributed_system::kubernetes_api_next().step_pre(kubernetes_api::Step::HandleRequest, Option::Some(msg));
+    let post = |s| !resource_exists(msg.get_DeleteRequest_0().key)(s);
+    let forward = distributed_system::kubernetes_api_next().forward(Option::Some(msg));
+
+    // D:
+    distributed_system::kubernetes_api_step_enabled(kubernetes_api::Step::HandleRequest, Option::Some(msg));
+    
+    // F:
+    assert(forall |s, s_prime| pre(s) && action_pred_call(next(), s, s_prime) ==> pre(s_prime) || post(s_prime));
+    assert(forall |s, s_prime| pre(s) && action_pred_call(next(), s, s_prime) && forward(s, s_prime) ==> post(s_prime));
     use_tla_forall::<State, Option<Message>>(sm_spec(), |recv| weak_fairness(distributed_system::kubernetes_api_next().forward(recv)), Option::Some(msg));
 
-    distributed_system::kubernetes_api_step_enabled(kubernetes_api::Step::HandleRequest, Option::Some(msg));
+    // temporal:
+    leads_to_eq_auto::<State>(sm_spec());
     wf1::<State>(sm_spec(),
         next(),
-        distributed_system::kubernetes_api_next().forward(Option::Some(msg)),
-        distributed_system::kubernetes_api_next().step_pre(kubernetes_api::Step::HandleRequest, Option::Some(msg)),
-        |s| !resource_exists(msg.get_DeleteRequest_0().key)(s)
+        forward,
+        pre,
+        post
     );
 }
 
@@ -83,27 +103,39 @@ proof fn lemma_create_sts_req_sent_leads_to(msg: Message, sub_res_msg: Message)
                 .leads_to(lift_state(resource_exists(sub_res_msg.get_CreateRequest_0().obj.key)))),
 {
     let sub_res_key = sub_res_msg.get_CreateRequest_0().obj.key;
+    let pre1 = distributed_system::kubernetes_api_next().step_pre(kubernetes_api::Step::HandleRequest, Option::Some(msg));
+    let post1 = message_sent(sub_res_msg);
+    let forward1 = distributed_system::kubernetes_api_next().forward(Option::Some(msg));
+    let pre2 = distributed_system::kubernetes_api_next().step_pre(kubernetes_api::Step::HandleRequest, Option::Some(sub_res_msg));
+    let post2 = resource_exists(sub_res_key);
+    let forward2 = distributed_system::kubernetes_api_next().forward(Option::Some(sub_res_msg));
 
-    leads_to_eq_auto::<State>(sm_spec());
+    // D:
+    distributed_system::kubernetes_api_step_enabled(kubernetes_api::Step::HandleRequest, Option::Some(msg));
+    distributed_system::kubernetes_api_step_enabled(kubernetes_api::Step::HandleRequest, Option::Some(sub_res_msg));
+    
+    // F:
+    assert(forall |s, s_prime| pre1(s) && action_pred_call(next(), s, s_prime) ==> pre1(s_prime) || post1(s_prime));
+    assert(forall |s, s_prime| pre1(s) && action_pred_call(next(), s, s_prime) && forward1(s, s_prime) ==> post1(s_prime));
+    assert(forall |s, s_prime| pre2(s) && action_pred_call(next(), s, s_prime) ==> pre2(s_prime) || post2(s_prime));
+    assert(forall |s, s_prime| pre2(s) && action_pred_call(next(), s, s_prime) && forward2(s, s_prime) ==> post2(s_prime));
     use_tla_forall::<State, Option<Message>>(sm_spec(), |recv| weak_fairness(distributed_system::kubernetes_api_next().forward(recv)), Option::Some(msg));
     use_tla_forall::<State, Option<Message>>(sm_spec(), |recv| weak_fairness(distributed_system::kubernetes_api_next().forward(recv)), Option::Some(sub_res_msg));
 
-    distributed_system::kubernetes_api_step_enabled(kubernetes_api::Step::HandleRequest, Option::Some(msg));
+    // temporal:
+    leads_to_eq_auto::<State>(sm_spec());
     wf1::<State>(sm_spec(),
         next(),
-        distributed_system::kubernetes_api_next().forward(Option::Some(msg)),
-        distributed_system::kubernetes_api_next().step_pre(kubernetes_api::Step::HandleRequest, Option::Some(msg)),
-        message_sent(sub_res_msg)
+        forward1,
+        pre1,
+        post1
     );
-
-    distributed_system::kubernetes_api_step_enabled(kubernetes_api::Step::HandleRequest, Option::Some(sub_res_msg));
     wf1::<State>(sm_spec(),
         next(),
-        distributed_system::kubernetes_api_next().forward(Option::Some(sub_res_msg)),
-        distributed_system::kubernetes_api_next().step_pre(kubernetes_api::Step::HandleRequest, Option::Some(sub_res_msg)),
-        resource_exists(sub_res_key)
+        forward2,
+        pre2,
+        post2
     );
-
     leads_to_trans::<State>(sm_spec(),
         message_sent(msg),
         message_sent(sub_res_msg),
