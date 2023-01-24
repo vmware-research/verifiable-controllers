@@ -911,6 +911,30 @@ pub proof fn wf1<T>(spec: TempPred<T>, next: ActionPred<T>, forward: ActionPred<
     wf1_variant_temp::<T>(spec, lift_action(next), lift_action(forward), lift_state(p), lift_state(q));
 }
 
+pub proof fn wf1_broadcast<T>()
+    ensures forall |spec: TempPred<T>, next: ActionPred<T>, forward: ActionPred<T>, p: StatePred<T>, q: StatePred<T>| (
+            true
+            && (forall |s, s_prime: T| p(s) && #[trigger] next(s, s_prime) ==> p(s_prime) || q(s_prime))
+            && (forall |s, s_prime: T| p(s) && #[trigger] next(s, s_prime) && forward(s, s_prime) ==> q(s_prime))
+            && (forall |s: T| #[trigger] p(s) ==> enabled(forward)(s))
+            && (spec.entails(always(lift_action(next))))
+            && (spec.entails(weak_fairness(forward)))) ==>
+            (spec.entails(lift_state(p).leads_to(lift_state(q))))
+{
+    assert forall |spec: TempPred<T>, next: ActionPred<T>, forward: ActionPred<T>, p: StatePred<T>, q: StatePred<T>| (
+            true
+            && (forall |s, s_prime: T| p(s) && #[trigger] next(s, s_prime) ==> p(s_prime) || q(s_prime))
+            && (forall |s, s_prime: T| p(s) && #[trigger] next(s, s_prime) && forward(s, s_prime) ==> q(s_prime))
+            && (forall |s: T| #[trigger] p(s) ==> enabled(forward)(s))
+            && (spec.entails(always(lift_action(next))))
+            && (spec.entails(weak_fairness(forward))))
+            implies
+            (spec.entails(lift_state(p).leads_to(lift_state(q)))) by {
+
+        wf1(spec, next, forward, p, q)
+    }
+}
+
 /// Get the initial leads_to by assuming (1) always asm and (2) a stronger wf assumption than wf1_variant_assume.
 /// pre:
 ///     |= p /\ next /\ asm => p' /\ q'
