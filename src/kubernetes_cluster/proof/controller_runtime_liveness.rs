@@ -36,7 +36,8 @@ pub proof fn lemma_pre_leads_to_post_by_controller(reconciler: Reconciler, input
     controller_action_pre_implies_next_pre(reconciler, action, input);
     valid_implies_trans::<State>(lift_state(pre), lift_state(controller_action_pre(reconciler, action, input)), lift_state(controller_next(reconciler).pre(input)));
 
-    controller_next(reconciler).wf1(input, sm_spec(reconciler), next(reconciler), pre, post);
+    // controller_next(reconciler).wf1(input, sm_spec(reconciler), next(reconciler), pre, post);
+    controller_next(reconciler).wf1_auto();
 }
 
 pub proof fn lemma_pre_leads_to_post_with_assumption_by_controller(reconciler: Reconciler, input: ControllerActionInput, action: ControllerAction, assumption: StatePred<State>, pre: StatePred<State>, post: StatePred<State>)

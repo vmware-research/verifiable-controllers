@@ -51,6 +51,28 @@ impl<State, Input, Output> Action<State, Input, Output> {
         wf1_variant_temp::<State>(spec, lift_action(next), lift_action(self.forward(input)), lift_state(pre), lift_state(post));
     }
 
+    pub proof fn wf1_auto(self)
+        ensures forall |input: Input, spec: TempPred<State>, next: ActionPred<State>, pre: StatePred<State>, post: StatePred<State>| (
+            true
+            && (forall |s, s_prime: State| pre(s) && #[trigger] next(s, s_prime) ==> pre(s_prime) || post(s_prime))
+            && (forall |s, s_prime: State| pre(s) && #[trigger] next(s, s_prime) && self.forward(input)(s, s_prime) ==> post(s_prime))
+            && (spec.entails(always(lift_action(next))))
+            && (spec.entails(always(lift_state(pre).implies(lift_state(self.pre(input))))))
+            && (spec.entails(self.weak_fairness(input))))
+            ==> (spec.entails(lift_state(pre).leads_to(lift_state(post))))
+    {
+        assert forall |input: Input, spec: TempPred<State>, next: ActionPred<State>, pre: StatePred<State>, post: StatePred<State>| (
+            true
+            && (forall |s, s_prime: State| pre(s) && #[trigger] next(s, s_prime) ==> pre(s_prime) || post(s_prime))
+            && (forall |s, s_prime: State| pre(s) && #[trigger] next(s, s_prime) && self.forward(input)(s, s_prime) ==> post(s_prime))
+            && (spec.entails(always(lift_action(next))))
+            && (spec.entails(always(lift_state(pre).implies(lift_state(self.pre(input))))))
+            && (spec.entails(self.weak_fairness(input))))
+            implies (spec.entails(lift_state(pre).leads_to(lift_state(post)))) by {
+                self.wf1(input, spec, next, pre, post);
+            };
+    }
+
     /// `wf1_assume` is a specialized version of temporal_logic_rules::wf1_assume for Action
     pub proof fn wf1_assume(self, input: Input, spec: TempPred<State>, next: ActionPred<State>, asm: StatePred<State>, pre: StatePred<State>, post: StatePred<State>)
         requires
