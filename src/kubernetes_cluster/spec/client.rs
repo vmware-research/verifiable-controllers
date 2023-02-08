@@ -15,7 +15,7 @@ pub struct ClientState {}
 
 pub struct ClientActionInput {
     pub recv: Option<Message>,
-    pub cr: ResourceObj,
+    pub cr: StateObject,
 }
 
 pub enum Step {
@@ -36,11 +36,11 @@ pub open spec fn client_req_msg(req: APIRequest) -> Message {
 pub open spec fn send_create_cr() -> ClientAction {
     Action {
         precondition: |input: ClientActionInput, s| {
-            &&& input.cr.key.kind.is_CustomResourceKind()
+            &&& input.cr.key.kind.is_CustomStateObjectKind()
             &&& input.recv.is_None()
         },
         transition: |input: ClientActionInput, s| {
-            (s, set![client_req_msg(create_req(ResourceObj{key: input.cr.key}))])
+            (s, set![client_req_msg(create_req(StateObject{key: input.cr.key}))])
         },
     }
 }
@@ -48,7 +48,7 @@ pub open spec fn send_create_cr() -> ClientAction {
 pub open spec fn send_delete_cr() -> ClientAction {
     Action {
         precondition: |input: ClientActionInput, s| {
-            &&& input.cr.key.kind.is_CustomResourceKind()
+            &&& input.cr.key.kind.is_CustomStateObjectKind()
             &&& input.recv.is_None()
         },
         transition: |input: ClientActionInput, s| {

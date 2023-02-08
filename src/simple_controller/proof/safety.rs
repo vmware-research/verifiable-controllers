@@ -17,7 +17,7 @@ use builtin_macros::*;
 
 verus! {
 
-pub proof fn lemma_always_reconcile_init_implies_no_pending_req(cr_key: ResourceKey)
+pub proof fn lemma_always_reconcile_init_implies_no_pending_req(cr_key: StateObjectKey)
     ensures
         sm_spec(simple_reconciler()).entails(always(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -53,9 +53,9 @@ pub proof fn lemma_always_reconcile_init_implies_no_pending_req(cr_key: Resource
     temp_pred_equality::<State<SimpleReconcileState>>(lift_state(invariant), invariant_temp_pred);
 }
 
-pub proof fn lemma_always_reconcile_get_cr_done_implies_pending_get_cr_req(cr_key: ResourceKey)
+pub proof fn lemma_always_reconcile_get_cr_done_implies_pending_get_cr_req(cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(always(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -92,9 +92,9 @@ pub proof fn lemma_always_reconcile_get_cr_done_implies_pending_get_cr_req(cr_ke
     temp_pred_equality::<State<SimpleReconcileState>>(lift_state(invariant), invariant_temp_pred);
 }
 
-pub proof fn lemma_always_reconcile_create_cm_done_implies_pending_create_cm_req(cr_key: ResourceKey)
+pub proof fn lemma_always_reconcile_create_cm_done_implies_pending_create_cm_req(cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(always(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -131,9 +131,9 @@ pub proof fn lemma_always_reconcile_create_cm_done_implies_pending_create_cm_req
     temp_pred_equality::<State<SimpleReconcileState>>(lift_state(invariant), invariant_temp_pred);
 }
 
-pub proof fn lemma_delete_cm_req_msg_never_sent(cr_key: ResourceKey)
+pub proof fn lemma_delete_cm_req_msg_never_sent(cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(always(
             lift_state(|s: State<SimpleReconcileState>| !exists |m: Message| {

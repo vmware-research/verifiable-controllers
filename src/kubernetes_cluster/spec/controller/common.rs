@@ -16,13 +16,13 @@ pub struct OngoingReconcile<T> {
 }
 
 pub struct ControllerState<T> {
-    pub ongoing_reconciles: Map<ResourceKey, OngoingReconcile<T>>,
-    pub scheduled_reconciles: Set<ResourceKey>,
+    pub ongoing_reconciles: Map<StateObjectKey, OngoingReconcile<T>>,
+    pub scheduled_reconciles: Set<StateObjectKey>,
 }
 
 pub struct ControllerActionInput {
     pub recv: Option<Message>,
-    pub scheduled_cr_key: Option<ResourceKey>,
+    pub scheduled_cr_key: Option<StateObjectKey>,
 }
 
 #[is_variant]

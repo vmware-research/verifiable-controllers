@@ -24,7 +24,7 @@ pub open spec fn simple_reconciler() -> Reconciler<SimpleReconcileState> {
     Reconciler {
         reconcile_init_state: || reconcile_init_state(),
         reconcile_trigger: |msg: Message| reconcile_trigger(msg),
-        reconcile_core: |cr_key: ResourceKey, resp_o: Option<APIResponse>, state: SimpleReconcileState| reconcile_core(cr_key, resp_o, state),
+        reconcile_core: |cr_key: StateObjectKey, resp_o: Option<APIResponse>, state: SimpleReconcileState| reconcile_core(cr_key, resp_o, state),
         reconcile_done: |state: SimpleReconcileState| reconcile_done(state),
     }
 }
@@ -38,11 +38,11 @@ pub open spec fn reconcile_init_state() -> SimpleReconcileState {
 /// This is a highly simplified triggering condition
 /// which only considers creation/update to CR objects.
 /// TODO: Reason about ownership and other relationships.
-pub open spec fn reconcile_trigger(msg: Message) -> Option<ResourceKey>
+pub open spec fn reconcile_trigger(msg: Message) -> Option<StateObjectKey>
     recommends
         msg.content.is_WatchEvent(),
 {
-    if msg.is_watch_event_of_kind(ResourceKind::CustomResourceKind) {
+    if msg.is_watch_event_of_kind(StateObjectKind::CustomStateObjectKind) {
         if msg.is_added_event() {
             Option::Some(msg.get_added_event().obj.key)
         } else if msg.is_modified_event() {
@@ -58,9 +58,9 @@ pub open spec fn reconcile_trigger(msg: Message) -> Option<ResourceKey>
 /// This is a highly simplified reconcile core spec:
 /// it sends requests to create a configmap for the cr.
 /// TODO: make the reconcile_core create more resources such as a statefulset
-pub open spec fn reconcile_core(cr_key: ResourceKey, resp_o: Option<APIResponse>, state: SimpleReconcileState) -> (SimpleReconcileState, Option<APIRequest>)
+pub open spec fn reconcile_core(cr_key: StateObjectKey, resp_o: Option<APIResponse>, state: SimpleReconcileState) -> (SimpleReconcileState, Option<APIRequest>)
     recommends
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
 {
     let pc = state.reconcile_pc;
     if pc === init_pc() {
@@ -91,38 +91,38 @@ pub open spec fn after_get_cr_pc() -> nat { 1 }
 
 pub open spec fn after_create_cm_pc() -> nat { 2 }
 
-pub open spec fn subresource_configmap(cr_key: ResourceKey) -> ResourceObj
+pub open spec fn subresource_configmap(cr_key: StateObjectKey) -> StateObject
     recommends
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
 {
-    ResourceObj {
-        key: ResourceKey {
+    StateObject {
+        key: StateObjectKey {
             name: cr_key.name + cm_suffix(),
             namespace: cr_key.namespace,
-            kind: ResourceKind::ConfigMapKind
+            kind: StateObjectKind::ConfigMapKind
         },
     }
 }
 
-pub open spec fn create_cm_req(cr_key: ResourceKey) -> APIRequest
+pub open spec fn create_cm_req(cr_key: StateObjectKey) -> APIRequest
     recommends
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
 {
     APIRequest::CreateRequest(CreateRequest{
         obj: subresource_configmap(cr_key),
     })
 }
 
-// pub open spec fn create_sts_req(cr_key: ResourceKey) -> APIRequest
+// pub open spec fn create_sts_req(cr_key: StateObjectKey) -> APIRequest
 //     recommends
-//         cr_key.kind.is_CustomResourceKind(),
+//         cr_key.kind.is_CustomStateObjectKind(),
 // {
 //     APIRequest::CreateRequest(CreateRequest{
-//         obj: ResourceObj {
-//             key: ResourceKey {
+//         obj: StateObject {
+//             key: StateObjectKey {
 //                 name: cr_key.name + sts_suffix(),
 //                 namespace: cr_key.namespace,
-//                 kind: ResourceKind::StatefulSetKind
+//                 kind: StateObjectKind::StatefulSetKind
 //             },
 //         },
 //     })

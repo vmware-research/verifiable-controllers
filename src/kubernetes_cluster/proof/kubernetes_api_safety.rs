@@ -10,7 +10,7 @@ use builtin_macros::*;
 
 verus! {
 
-pub proof fn lemma_always_res_exists_implies_added_event_sent<T>(reconciler: Reconciler<T>, res: ResourceObj)
+pub proof fn lemma_always_res_exists_implies_added_event_sent<T>(reconciler: Reconciler<T>, res: StateObject)
     ensures
         sm_spec(reconciler).entails(
             always(

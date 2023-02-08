@@ -56,9 +56,9 @@ pub proof fn lemma_pre_leads_to_post_with_assumption_by_controller<T>(reconciler
     controller_next(reconciler).wf1_assume(input, sm_spec(reconciler), next(reconciler), assumption, pre, post);
 }
 
-pub proof fn lemma_relevant_event_sent_leads_to_reconcile_triggered<T>(reconciler: Reconciler<T>, msg: Message, cr_key: ResourceKey)
+pub proof fn lemma_relevant_event_sent_leads_to_reconcile_triggered<T>(reconciler: Reconciler<T>, msg: Message, cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {
@@ -94,9 +94,9 @@ pub proof fn lemma_relevant_event_sent_leads_to_reconcile_triggered<T>(reconcile
     lemma_pre_leads_to_post_by_controller::<T>(reconciler, input, trigger_reconcile(reconciler), pre, post);
 }
 
-pub proof fn lemma_reconcile_done_leads_to_reconcile_scheduled<T>(reconciler: Reconciler<T>, cr_key: ResourceKey)
+pub proof fn lemma_reconcile_done_leads_to_reconcile_scheduled<T>(reconciler: Reconciler<T>, cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {
@@ -124,9 +124,9 @@ pub proof fn lemma_reconcile_done_leads_to_reconcile_scheduled<T>(reconciler: Re
     lemma_pre_leads_to_post_by_controller::<T>(reconciler, input, end_reconcile(reconciler), pre, post);
 }
 
-pub proof fn lemma_scheduled_reconcile_leads_to_init<T>(reconciler: Reconciler<T>, cr_key: ResourceKey)
+pub proof fn lemma_scheduled_reconcile_leads_to_init<T>(reconciler: Reconciler<T>, cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {
@@ -156,9 +156,9 @@ pub proof fn lemma_scheduled_reconcile_leads_to_init<T>(reconciler: Reconciler<T
     lemma_pre_leads_to_post_by_controller::<T>(reconciler, input, run_scheduled_reconcile(reconciler), pre, post);
 }
 
-pub proof fn lemma_reconcile_done_leads_to_reconcile_triggered<T>(reconciler: Reconciler<T>, cr_key: ResourceKey)
+pub proof fn lemma_reconcile_done_leads_to_reconcile_triggered<T>(reconciler: Reconciler<T>, cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {

@@ -23,32 +23,32 @@ use builtin_macros::*;
 
 verus! {
 
-spec fn match_cr(cr: ResourceObj) -> TempPred<State<SimpleReconcileState>>
+spec fn match_cr(cr: StateObject) -> TempPred<State<SimpleReconcileState>>
     recommends
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
 {
     lift_state(|s: State<SimpleReconcileState>| s.resource_key_exists(simple_reconciler::subresource_configmap(cr.key).key))
 }
 
-spec fn liveness(cr: ResourceObj) -> TempPred<State<SimpleReconcileState>>
+spec fn liveness(cr: StateObject) -> TempPred<State<SimpleReconcileState>>
     recommends
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
 {
     lift_state(|s: State<SimpleReconcileState>| s.resource_obj_exists(cr)).leads_to(always(match_cr(cr)))
 }
 
 proof fn liveness_proof_forall_cr()
     ensures
-        forall |cr: ResourceObj| cr.key.kind.is_CustomResourceKind() ==> #[trigger] sm_spec(simple_reconciler()).entails(liveness(cr)),
+        forall |cr: StateObject| cr.key.kind.is_CustomStateObjectKind() ==> #[trigger] sm_spec(simple_reconciler()).entails(liveness(cr)),
 {
-    assert forall |cr: ResourceObj| cr.key.kind.is_CustomResourceKind() implies #[trigger] sm_spec(simple_reconciler()).entails(liveness(cr)) by {
+    assert forall |cr: StateObject| cr.key.kind.is_CustomStateObjectKind() implies #[trigger] sm_spec(simple_reconciler()).entails(liveness(cr)) by {
         liveness_proof(cr);
     };
 }
 
-proof fn liveness_proof(cr: ResourceObj)
+proof fn liveness_proof(cr: StateObject)
     requires
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| s.resource_obj_exists(cr))
@@ -60,9 +60,9 @@ proof fn liveness_proof(cr: ResourceObj)
     lemma_cr_added_event_msg_sent_leads_to_cm_always_exists(cr);
 }
 
-proof fn lemma_cr_added_event_msg_sent_leads_to_cm_always_exists(cr: ResourceObj)
+proof fn lemma_cr_added_event_msg_sent_leads_to_cm_always_exists(cr: StateObject)
     requires
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| s.message_sent(form_msg(HostId::KubernetesAPI, HostId::CustomController, added_event_msg(cr))))
@@ -82,9 +82,9 @@ proof fn lemma_cr_added_event_msg_sent_leads_to_cm_always_exists(cr: ResourceObj
 
 }
 
-proof fn lemma_cr_added_event_msg_sent_leads_to_controller_in_reconcile(cr: ResourceObj)
+proof fn lemma_cr_added_event_msg_sent_leads_to_controller_in_reconcile(cr: StateObject)
     requires
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| s.message_sent(form_msg(HostId::KubernetesAPI, HostId::CustomController, added_event_msg(cr))))
@@ -118,9 +118,9 @@ proof fn lemma_cr_added_event_msg_sent_leads_to_controller_in_reconcile(cr: Reso
     or_leads_to_combine::<State<SimpleReconcileState>>(sm_spec(simple_reconciler()), cr_added_event_msg_sent_and_controller_not_in_reconcile, cr_added_event_msg_sent_and_controller_in_reconcile, controller_in_reconcile);
 }
 
-proof fn lemma_controller_in_reconcile_leads_to_cm_always_exists(cr: ResourceObj)
+proof fn lemma_controller_in_reconcile_leads_to_cm_always_exists(cr: StateObject)
     requires
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| s.reconcile_state_contains(cr.key))
@@ -173,9 +173,9 @@ proof fn lemma_controller_in_reconcile_leads_to_cm_always_exists(cr: ResourceObj
     );
 }
 
-proof fn lemma_init_pc_leads_to_cm_always_exists(cr: ResourceObj)
+proof fn lemma_init_pc_leads_to_cm_always_exists(cr: StateObject)
     requires
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -221,9 +221,9 @@ proof fn lemma_init_pc_leads_to_cm_always_exists(cr: ResourceObj)
     leads_to_trans_temp::<State<SimpleReconcileState>>(sm_spec(simple_reconciler()), lift_state(reconcile_at_init_pc), lift_state(reconciler_at_after_get_cr_pc), always(lift_state(cm_exists)));
 }
 
-proof fn lemma_after_get_cr_pc_leads_to_cm_always_exists(cr: ResourceObj)
+proof fn lemma_after_get_cr_pc_leads_to_cm_always_exists(cr: StateObject)
     requires
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -310,9 +310,9 @@ proof fn lemma_after_get_cr_pc_leads_to_cm_always_exists(cr: ResourceObj)
     leads_to_trans_temp::<State<SimpleReconcileState>>(sm_spec(simple_reconciler()), lift_state(reconciler_at_after_get_cr_pc), lift_state(reconciler_at_after_create_cm_pc), always(lift_state(cm_exists)));
 }
 
-proof fn lemma_after_create_cm_pc_leads_to_cm_always_exists(cr: ResourceObj)
+proof fn lemma_after_create_cm_pc_leads_to_cm_always_exists(cr: StateObject)
     requires
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -359,9 +359,9 @@ proof fn lemma_after_create_cm_pc_leads_to_cm_always_exists(cr: ResourceObj)
     lemma_p_leads_to_cm_always_exists(cr, lift_state(reconciler_at_after_create_cm_pc));
 }
 
-proof fn lemma_reconcile_done_leads_to_cm_always_exists(cr: ResourceObj)
+proof fn lemma_reconcile_done_leads_to_cm_always_exists(cr: StateObject)
     requires
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -394,9 +394,9 @@ proof fn lemma_reconcile_done_leads_to_cm_always_exists(cr: ResourceObj)
     leads_to_trans_temp::<State<SimpleReconcileState>>(sm_spec(simple_reconciler()), lift_state(reconciler_reconcile_done), lift_state(reconcile_at_init_pc), always(lift_state(cm_exists)));
 }
 
-proof fn lemma_p_leads_to_cm_always_exists(cr: ResourceObj, p: TempPred<State<SimpleReconcileState>>)
+proof fn lemma_p_leads_to_cm_always_exists(cr: StateObject, p: TempPred<State<SimpleReconcileState>>)
     requires
-        cr.key.kind.is_CustomResourceKind(),
+        cr.key.kind.is_CustomStateObjectKind(),
         sm_spec(simple_reconciler()).entails(
             p.leads_to(lift_state(|s: State<SimpleReconcileState>| s.resource_key_exists(simple_reconciler::subresource_configmap(cr.key).key)))
         ),
@@ -426,9 +426,9 @@ proof fn lemma_p_leads_to_cm_always_exists(cr: ResourceObj, p: TempPred<State<Si
     leads_to_stable_temp::<State<SimpleReconcileState>>(sm_spec(simple_reconciler()), lift_action(next_and_invariant), p, lift_state(cm_exists));
 }
 
-proof fn lemma_relevant_event_sent_leads_to_init_pc(msg: Message, cr_key: ResourceKey)
+proof fn lemma_relevant_event_sent_leads_to_init_pc(msg: Message, cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -449,9 +449,9 @@ proof fn lemma_relevant_event_sent_leads_to_init_pc(msg: Message, cr_key: Resour
     controller_runtime_liveness::lemma_relevant_event_sent_leads_to_reconcile_triggered::<SimpleReconcileState>(simple_reconciler(), msg, cr_key);
 }
 
-proof fn lemma_init_pc_leads_to_after_get_cr_pc(cr_key: ResourceKey)
+proof fn lemma_init_pc_leads_to_after_get_cr_pc(cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -484,9 +484,9 @@ proof fn lemma_init_pc_leads_to_after_get_cr_pc(cr_key: ResourceKey)
     controller_runtime_liveness::lemma_pre_leads_to_post_by_controller::<SimpleReconcileState>(simple_reconciler(), input, continue_reconcile(simple_reconciler()), pre, post);
 }
 
-proof fn lemma_msg_sent_and_after_get_cr_pc_leads_to_after_create_cm_pc(msg: Message, cr_key: ResourceKey)
+proof fn lemma_msg_sent_and_after_get_cr_pc_leads_to_after_create_cm_pc(msg: Message, cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| {
@@ -523,9 +523,9 @@ proof fn lemma_msg_sent_and_after_get_cr_pc_leads_to_after_create_cm_pc(msg: Mes
     controller_runtime_liveness::lemma_pre_leads_to_post_by_controller::<SimpleReconcileState>(simple_reconciler(), input, continue_reconcile(simple_reconciler()), pre, post);
 }
 
-proof fn lemma_exists_msg_sent_and_after_get_cr_pc_leads_to_after_create_cm_pc(cr_key: ResourceKey)
+proof fn lemma_exists_msg_sent_and_after_get_cr_pc_leads_to_after_create_cm_pc(cr_key: StateObjectKey)
     requires
-        cr_key.kind.is_CustomResourceKind(),
+        cr_key.kind.is_CustomStateObjectKind(),
     ensures
         sm_spec(simple_reconciler()).entails(
             lift_state(|s: State<SimpleReconcileState>| {

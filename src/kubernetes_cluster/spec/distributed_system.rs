@@ -37,32 +37,32 @@ impl<T> State<T> {
         self.network_state.sent_messages.contains(msg)
     }
 
-    pub open spec fn resource_key_exists(self, key: ResourceKey) -> bool {
+    pub open spec fn resource_key_exists(self, key: StateObjectKey) -> bool {
         self.kubernetes_api_state.resources.dom().contains(key)
     }
 
-    pub open spec fn resource_obj_exists(self, obj: ResourceObj) -> bool {
+    pub open spec fn resource_obj_exists(self, obj: StateObject) -> bool {
         &&& self.kubernetes_api_state.resources.dom().contains(obj.key)
         &&& self.kubernetes_api_state.resources[obj.key] === obj
     }
 
-    pub open spec fn resource_obj_of(self, key: ResourceKey) -> ResourceObj
+    pub open spec fn resource_obj_of(self, key: StateObjectKey) -> StateObject
         recommends self.resource_key_exists(key)
     {
         self.kubernetes_api_state.resources[key]
     }
 
-    pub open spec fn reconcile_state_contains(self, key: ResourceKey) -> bool {
+    pub open spec fn reconcile_state_contains(self, key: StateObjectKey) -> bool {
         self.controller_state.ongoing_reconciles.dom().contains(key)
     }
 
-    pub open spec fn reconcile_state_of(self, key: ResourceKey) -> OngoingReconcile<T>
+    pub open spec fn reconcile_state_of(self, key: StateObjectKey) -> OngoingReconcile<T>
         recommends self.reconcile_state_contains(key)
     {
         self.controller_state.ongoing_reconciles[key]
     }
 
-    pub open spec fn reconcile_scheduled_for(self, key: ResourceKey) -> bool {
+    pub open spec fn reconcile_scheduled_for(self, key: StateObjectKey) -> bool {
         self.controller_state.scheduled_reconciles.contains(key)
     }
 }

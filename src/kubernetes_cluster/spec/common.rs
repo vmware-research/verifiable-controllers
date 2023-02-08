@@ -10,22 +10,22 @@ use builtin_macros::*;
 verus! {
 
 #[is_variant]
-pub enum ResourceKind {
-    CustomResourceKind,
+pub enum StateObjectKind {
+    CustomStateObjectKind,
     ConfigMapKind,
     StatefulSetKind,
     PodKind,
     VolumeKind,
 }
 
-pub struct ResourceKey {
+pub struct StateObjectKey {
     pub name: Seq<char>,
     pub namespace: Seq<char>,
-    pub kind: ResourceKind,
+    pub kind: StateObjectKind,
 }
 
-pub struct ResourceObj {
-    pub key: ResourceKey,
+pub struct StateObject {
+    pub key: StateObjectKey,
 }
 
 #[is_variant]
@@ -35,19 +35,19 @@ pub enum APIError {
 }
 
 pub struct GetRequest {
-    pub key: ResourceKey,
+    pub key: StateObjectKey,
 }
 
 pub struct ListRequest {
-    pub kind: ResourceKind,
+    pub kind: StateObjectKind,
 }
 
 pub struct CreateRequest {
-    pub obj: ResourceObj,
+    pub obj: StateObject,
 }
 
 pub struct DeleteRequest {
-    pub key: ResourceKey,
+    pub key: StateObjectKey,
 }
 
 #[is_variant]
@@ -59,22 +59,22 @@ pub enum APIRequest {
 }
 
 pub struct GetResponse {
-    pub res: Result<ResourceObj, APIError>,
+    pub res: Result<StateObject, APIError>,
     pub req: GetRequest,
 }
 
 pub struct ListResponse {
-    pub res: Result<Seq<ResourceObj>, APIError>,
+    pub res: Result<Seq<StateObject>, APIError>,
     pub req: ListRequest,
 }
 
 pub struct CreateResponse {
-    pub res: Result<ResourceObj, APIError>,
+    pub res: Result<StateObject, APIError>,
     pub req: CreateRequest,
 }
 
 pub struct DeleteResponse {
-    pub res: Result<ResourceObj, APIError>,
+    pub res: Result<StateObject, APIError>,
     pub req: DeleteRequest,
 }
 
@@ -87,15 +87,15 @@ pub enum APIResponse {
 }
 
 pub struct AddedEvent {
-    pub obj: ResourceObj,
+    pub obj: StateObject,
 }
 
 pub struct ModifiedEvent {
-    pub obj: ResourceObj,
+    pub obj: StateObject,
 }
 
 pub struct DeletedEvent {
-    pub obj: ResourceObj,
+    pub obj: StateObject,
 }
 
 #[is_variant]
@@ -136,7 +136,7 @@ impl Message {
         &&& (self.content.get_APIRequest_0().is_CreateRequest() || self.content.get_APIRequest_0().is_DeleteRequest())
     }
 
-    pub open spec fn is_write_request_of_kind(self, kind: ResourceKind) -> bool {
+    pub open spec fn is_write_request_of_kind(self, kind: StateObjectKind) -> bool {
         &&& self.is_write_request()
         &&& match self.content.get_APIRequest_0() {
             APIRequest::CreateRequest(req) => req.obj.key.kind === kind,
@@ -229,7 +229,7 @@ impl Message {
         self.content.get_APIResponse_0().get_DeleteResponse_0()
     }
 
-    pub open spec fn is_watch_event_of_kind(self, kind: ResourceKind) -> bool {
+    pub open spec fn is_watch_event_of_kind(self, kind: StateObjectKind) -> bool {
         &&& self.content.is_WatchEvent()
         &&& match self.content.get_WatchEvent_0() {
             WatchEvent::AddedEvent(added) => added.obj.key.kind === kind,
@@ -345,84 +345,84 @@ pub open spec fn form_msg(src: HostId, dst: HostId, msg_content: MessageContent)
     }
 }
 
-pub open spec fn form_get_resp_msg(req_msg: Message, result: Result<ResourceObj, APIError>) -> Message
+pub open spec fn form_get_resp_msg(req_msg: Message, result: Result<StateObject, APIError>) -> Message
     recommends req_msg.is_get_request(),
 {
     form_msg(req_msg.dst, req_msg.src, get_resp_msg(result, req_msg.get_get_request()))
 }
 
-pub open spec fn added_event_msg(obj: ResourceObj) -> MessageContent {
+pub open spec fn added_event_msg(obj: StateObject) -> MessageContent {
     MessageContent::WatchEvent(WatchEvent::AddedEvent(AddedEvent{
         obj: obj
     }))
 }
 
-pub open spec fn modified_event_msg(obj: ResourceObj) -> MessageContent {
+pub open spec fn modified_event_msg(obj: StateObject) -> MessageContent {
     MessageContent::WatchEvent(WatchEvent::ModifiedEvent(ModifiedEvent{
         obj: obj
     }))
 }
 
-pub open spec fn deleted_event_msg(obj: ResourceObj) -> MessageContent {
+pub open spec fn deleted_event_msg(obj: StateObject) -> MessageContent {
     MessageContent::WatchEvent(WatchEvent::DeletedEvent(DeletedEvent{
         obj: obj
     }))
 }
 
-pub open spec fn get_req_msg(key: ResourceKey) -> MessageContent {
+pub open spec fn get_req_msg(key: StateObjectKey) -> MessageContent {
     MessageContent::APIRequest(APIRequest::GetRequest(GetRequest{
         key: key,
     }))
 }
 
-pub open spec fn list_req_msg(kind: ResourceKind) -> MessageContent {
+pub open spec fn list_req_msg(kind: StateObjectKind) -> MessageContent {
     MessageContent::APIRequest(APIRequest::ListRequest(ListRequest{
         kind: kind,
     }))
 }
 
-pub open spec fn create_req(obj: ResourceObj) -> APIRequest {
+pub open spec fn create_req(obj: StateObject) -> APIRequest {
     APIRequest::CreateRequest(CreateRequest{
         obj: obj,
     })
 }
 
-pub open spec fn create_req_msg(obj: ResourceObj) -> MessageContent {
+pub open spec fn create_req_msg(obj: StateObject) -> MessageContent {
     MessageContent::APIRequest(create_req(obj))
 }
 
-pub open spec fn delete_req(key: ResourceKey) -> APIRequest {
+pub open spec fn delete_req(key: StateObjectKey) -> APIRequest {
     APIRequest::DeleteRequest(DeleteRequest{
         key: key,
     })
 }
 
-pub open spec fn delete_req_msg(key: ResourceKey) -> MessageContent {
+pub open spec fn delete_req_msg(key: StateObjectKey) -> MessageContent {
     MessageContent::APIRequest(delete_req(key))
 }
 
-pub open spec fn get_resp_msg(res: Result<ResourceObj, APIError>, req: GetRequest) -> MessageContent {
+pub open spec fn get_resp_msg(res: Result<StateObject, APIError>, req: GetRequest) -> MessageContent {
     MessageContent::APIResponse(APIResponse::GetResponse(GetResponse{
         res: res,
         req: req,
     }))
 }
 
-pub open spec fn list_resp_msg(res: Result<Seq<ResourceObj>, APIError>, req: ListRequest) -> MessageContent {
+pub open spec fn list_resp_msg(res: Result<Seq<StateObject>, APIError>, req: ListRequest) -> MessageContent {
     MessageContent::APIResponse(APIResponse::ListResponse(ListResponse{
         res: res,
         req: req,
     }))
 }
 
-pub open spec fn create_resp_msg(res: Result<ResourceObj, APIError>, req: CreateRequest) -> MessageContent {
+pub open spec fn create_resp_msg(res: Result<StateObject, APIError>, req: CreateRequest) -> MessageContent {
     MessageContent::APIResponse(APIResponse::CreateResponse(CreateResponse{
         res: res,
         req: req,
     }))
 }
 
-pub open spec fn delete_resp_msg(res: Result<ResourceObj, APIError>, req: DeleteRequest) -> MessageContent {
+pub open spec fn delete_resp_msg(res: Result<StateObject, APIError>, req: DeleteRequest) -> MessageContent {
     MessageContent::APIResponse(APIResponse::DeleteResponse(DeleteResponse{
         res: res,
         req: req,

@@ -36,9 +36,9 @@ pub struct Reconciler<#[verifier(maybe_negative)] T> {
 
 pub type ReconcileInitState<T> = FnSpec() -> T;
 
-pub type ReconcileTrigger = FnSpec(Message) -> Option<ResourceKey>;
+pub type ReconcileTrigger = FnSpec(Message) -> Option<StateObjectKey>;
 
-pub type ReconcileCore<T> = FnSpec(ResourceKey, Option<APIResponse>, T) -> (T, Option<APIRequest>);
+pub type ReconcileCore<T> = FnSpec(StateObjectKey, Option<APIResponse>, T) -> (T, Option<APIRequest>);
 
 pub type ReconcileDone<T> = FnSpec(T) -> bool;
 

@@ -93,7 +93,7 @@ pub proof fn lemma_create_req_leads_to_ok_resp<T>(reconciler: Reconciler<T>, msg
     lemma_pre_leads_to_post_with_assumption_by_kubernetes_api::<T>(reconciler, Option::Some(msg), handle_request(), assumption, pre, post);
 }
 
-pub proof fn lemma_get_req_leads_to_some_resp<T>(reconciler: Reconciler<T>, msg: Message, key: ResourceKey)
+pub proof fn lemma_get_req_leads_to_some_resp<T>(reconciler: Reconciler<T>, msg: Message, key: StateObjectKey)
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {
@@ -138,7 +138,7 @@ pub proof fn lemma_get_req_leads_to_some_resp<T>(reconciler: Reconciler<T>, msg:
     lemma_pre_leads_to_post_by_kubernetes_api::<T>(reconciler, input, handle_request(), pre, post);
 }
 
-pub proof fn lemma_get_req_leads_to_ok_or_err_resp<T>(reconciler: Reconciler<T>, msg: Message, key: ResourceKey)
+pub proof fn lemma_get_req_leads_to_ok_or_err_resp<T>(reconciler: Reconciler<T>, msg: Message, key: StateObjectKey)
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {
@@ -171,7 +171,7 @@ pub proof fn lemma_get_req_leads_to_ok_or_err_resp<T>(reconciler: Reconciler<T>,
     );
 }
 
-pub proof fn lemma_get_req_leads_to_ok_resp_if_never_delete<T>(reconciler: Reconciler<T>, msg: Message, res: ResourceObj)
+pub proof fn lemma_get_req_leads_to_ok_resp_if_never_delete<T>(reconciler: Reconciler<T>, msg: Message, res: StateObject)
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {
@@ -220,7 +220,7 @@ pub proof fn lemma_get_req_leads_to_ok_resp_if_never_delete<T>(reconciler: Recon
     lemma_pre_leads_to_post_with_assumption_by_kubernetes_api::<T>(reconciler, Option::Some(msg), handle_request(), assumption, pre, post);
 }
 
-pub proof fn lemma_get_req_leads_to_ok_resp_if_res_always_exists<T>(reconciler: Reconciler<T>, msg: Message, res: ResourceObj)
+pub proof fn lemma_get_req_leads_to_ok_resp_if_res_always_exists<T>(reconciler: Reconciler<T>, msg: Message, res: StateObject)
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {
@@ -290,7 +290,7 @@ pub proof fn lemma_get_req_leads_to_ok_resp_if_res_always_exists<T>(reconciler: 
     p_and_always_p_equals_always_p::<State<T>>(lift_state(res_exists));
 }
 
-pub proof fn lemma_create_req_leads_to_res_exists<T>(reconciler: Reconciler<T>, msg: Message, res: ResourceObj)
+pub proof fn lemma_create_req_leads_to_res_exists<T>(reconciler: Reconciler<T>, msg: Message, res: StateObject)
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {
@@ -314,7 +314,7 @@ pub proof fn lemma_create_req_leads_to_res_exists<T>(reconciler: Reconciler<T>, 
     lemma_pre_leads_to_post_by_kubernetes_api::<T>(reconciler, Option::Some(msg), handle_request(), pre, post);
 }
 
-pub proof fn lemma_delete_req_leads_to_res_not_exists<T>(reconciler: Reconciler<T>, msg: Message, res: ResourceObj)
+pub proof fn lemma_delete_req_leads_to_res_not_exists<T>(reconciler: Reconciler<T>, msg: Message, res: StateObject)
     ensures
         sm_spec(reconciler).entails(
             lift_state(|s: State<T>| {
@@ -338,7 +338,7 @@ pub proof fn lemma_delete_req_leads_to_res_not_exists<T>(reconciler: Reconciler<
     lemma_pre_leads_to_post_by_kubernetes_api::<T>(reconciler, Option::Some(msg), handle_request(), pre, post);
 }
 
-pub proof fn lemma_always_res_always_exists_implies_delete_never_sent<T>(reconciler: Reconciler<T>, msg: Message, res: ResourceObj)
+pub proof fn lemma_always_res_always_exists_implies_delete_never_sent<T>(reconciler: Reconciler<T>, msg: Message, res: StateObject)
     ensures
         sm_spec(reconciler).entails(always(
             always(lift_state(|s: State<T>| s.resource_obj_exists(res)))
@@ -385,7 +385,7 @@ pub proof fn lemma_always_res_always_exists_implies_delete_never_sent<T>(reconci
 }
 
 /// How to prove this? It is obvious according to lemma_always_res_always_exists_implies_delete_never_sent
-pub proof fn lemma_always_res_always_exists_implies_forall_delete_never_sent<T>(reconciler: Reconciler<T>, res: ResourceObj)
+pub proof fn lemma_always_res_always_exists_implies_forall_delete_never_sent<T>(reconciler: Reconciler<T>, res: StateObject)
     ensures
         sm_spec(reconciler).entails(always(
             always(lift_state(|s: State<T>| s.resource_obj_exists(res)))

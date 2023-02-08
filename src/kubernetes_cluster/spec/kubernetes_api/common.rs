@@ -1,9 +1,9 @@
 // Copyright 2022 VMware, Inc.
 // SPDX-License-Identifier: MIT
 #![allow(unused_imports)]
-use crate::state_machine::action::*;
 use crate::kubernetes_cluster::spec::common::*;
 use crate::pervasive::{map::*, option::*, result::*, seq::*, set::*, string::*};
+use crate::state_machine::action::*;
 use crate::state_machine::state_machine::*;
 use crate::temporal_logic::defs::*;
 use builtin::*;
@@ -12,7 +12,7 @@ use builtin_macros::*;
 verus! {
 
 pub struct KubernetesAPIState {
-    pub resources: Map<ResourceKey, ResourceObj>,
+    pub resources: Map<StateObjectKey, StateObject>,
 }
 
 pub enum KubernetesAPIStep {
