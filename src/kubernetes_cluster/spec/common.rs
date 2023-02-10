@@ -24,8 +24,92 @@ pub struct StateObjectKey {
     pub kind: StateObjectKind,
 }
 
-pub struct StateObject {
-    pub key: StateObjectKey,
+pub struct ObjectMeta {
+    pub name: Seq<char>,
+    pub namespace: Seq<char>,
+    // there should be more fields in metadata, such as resource version
+}
+
+#[is_variant]
+pub enum StateObject {
+    ConfigMap(ConfigMap),
+    StatefulSet(StatefulSet),
+    Pod(Pod),
+    Volume(Volume),
+}
+
+struct ConfigMap {
+    pub object_meta: ObjectMeta,
+    // there should be more fields in configmap, such as spec
+}
+
+impl ConfigMap {
+    spec fn key(self) -> StateObjectKey {
+        StateObjectKey {
+            name: self.object_meta.name,
+            namespace: self.object_meta.namespace,
+            kind: self.kind(),
+        }
+    }
+
+    spec fn kind(self) -> StateObjectKind {
+        StateObjectKind::ConfigMapKind
+    }
+}
+
+struct StatefulSet {
+    pub object_meta: ObjectMeta,
+}
+
+impl StatefulSet {
+    spec fn key(self) -> StateObjectKey {
+        StateObjectKey {
+            name: self.object_meta.name,
+            namespace: self.object_meta.namespace,
+            kind: self.kind(),
+        }
+    }
+
+    spec fn kind(self) -> StateObjectKind {
+        StateObjectKind::StatefulSetKind
+    }
+}
+
+struct Pod {
+    pub object_meta: ObjectMeta,
+}
+
+impl Pod {
+    spec fn key(self) -> StateObjectKey {
+        StateObjectKey {
+            name: self.object_meta.name,
+            namespace: self.object_meta.namespace,
+            kind: self.kind(),
+        }
+    }
+
+    spec fn kind(self) -> StateObjectKind {
+        StateObjectKind::PodKind
+    }
+}
+
+struct Volume {
+    pub object_meta: ObjectMeta,
+    // there should be more fields in volume, such as spec
+}
+
+impl Volume {
+    spec fn key(&self) -> StateObjectKey {
+        StateObjectKey {
+            name: self.object_meta.name,
+            namespace: self.object_meta.namespace,
+            kind: self.kind(),
+        }
+    }
+
+    spec fn kind(&self) -> StateObjectKind {
+        StateObjectKind::VolumeKind
+    }
 }
 
 #[is_variant]
