@@ -252,6 +252,16 @@ proof fn lemma_after_get_cr_pc_leads_to_cm_always_exists(cr: ResourceObj)
                     }
                 }
             };
+            assert(is_controller_get_cr_request_msg(get_cr_req_msg, cr.key)
+                && ex.suffix(i).head().reconcile_state_of(cr.key).pending_req_msg === Option::Some(get_cr_req_msg)
+                && {
+                    ||| ex.suffix(i).head().message_in_flight(get_cr_req_msg)
+                    ||| exists |resp_msg: Message| {
+                        &&& #[trigger] ex.suffix(i).head().message_in_flight(resp_msg)
+                        &&& resp_msg_matches_req_msg(resp_msg, get_cr_req_msg)
+                    }
+                }
+            );
 
             if ex.suffix(i).head().message_in_flight(get_cr_req_msg) {
                 let pre = |req_msg: Message| reconciler_at_after_get_cr_pc_and_pending_req_and_req_in_flight(req_msg, cr.key);
@@ -503,6 +513,42 @@ proof fn lemma_resp_msg_sent_and_after_get_cr_pc_leads_to_after_create_cm_pc(res
     controller_runtime_safety::lemma_always_resp_matches_at_most_one_pending_req::<SimpleReconcileState>(simple_reconciler(), resp_msg, cr_key);
 
     strengthen_next::<State<SimpleReconcileState>>(sm_spec(simple_reconciler()), next(simple_reconciler()), controller_runtime_safety::resp_matches_at_most_one_pending_req(resp_msg, cr_key), next_and_invariant);
+    controller_runtime_liveness::lemma_pre_leads_to_post_by_controller::<SimpleReconcileState>(simple_reconciler(), input, next_and_invariant, continue_reconcile(simple_reconciler()), pre, post);
+}
+
+proof fn lemma_ok_resp_msg_sent_and_after_get_cr_pc_leads_to_after_create_cm_pc(resp_msg: Message, req_msg: Message, cr_key: ResourceKey)
+    requires
+        cr_key.kind.is_CustomResourceKind(),
+    ensures
+        sm_spec(simple_reconciler()).entails(
+            lift_state(|s: State<SimpleReconcileState>| {
+                &&& s.message_in_flight(resp_msg)
+                &&& resp_msg_matches_req_msg(resp_msg, req_msg)
+                &&& is_ok_resp(resp_msg.content.get_APIResponse_0())
+                &&& reconciler_at_after_get_cr_pc_and_pending_req(req_msg, cr_key)(s)
+            }).leads_to(lift_state(reconciler_at_after_create_cm_pc(cr_key)))
+        ),
+{
+    let pre = |s: State<SimpleReconcileState>| {
+        &&& s.message_in_flight(resp_msg)
+        &&& resp_msg_matches_req_msg(resp_msg, req_msg)
+        &&& is_ok_resp(resp_msg.content.get_APIResponse_0())
+        &&& reconciler_at_after_get_cr_pc_and_pending_req(req_msg, cr_key)(s)
+    };
+    let post = reconciler_at_after_create_cm_pc(cr_key);
+    let input = ControllerActionInput {
+        recv: Option::Some(resp_msg),
+        scheduled_cr_key: Option::Some(cr_key),
+    };
+
+    let next_and_invariant = |s, s_prime: State<SimpleReconcileState>| {
+        &&& next(simple_reconciler())(s, s_prime)
+        &&& controller_runtime_safety::req_and_resp_match_each_other_exclusively(resp_msg, req_msg, cr_key)(s)
+    };
+
+    controller_runtime_safety::lemma_always_req_and_resp_match_each_other_exclusively::<SimpleReconcileState>(simple_reconciler(), resp_msg, req_msg, cr_key);
+
+    strengthen_next::<State<SimpleReconcileState>>(sm_spec(simple_reconciler()), next(simple_reconciler()), controller_runtime_safety::req_and_resp_match_each_other_exclusively(resp_msg, req_msg, cr_key), next_and_invariant);
     controller_runtime_liveness::lemma_pre_leads_to_post_by_controller::<SimpleReconcileState>(simple_reconciler(), input, next_and_invariant, continue_reconcile(simple_reconciler()), pre, post);
 }
 
