@@ -48,6 +48,52 @@ pub open spec fn pending_req_has_unique_id<T>(cr_key: ResourceKey) -> StatePred<
     }
 }
 
+pub open spec fn in_flight_resp_has_unique_id<T>(resp_msg: Message) -> StatePred<State<T>>
+    recommends
+        resp_msg.content.is_APIResponse(),
+{
+    |s: State<T>| {
+        forall |other_msg: Message|
+            s.message_in_flight(resp_msg)
+            && #[trigger] s.message_in_flight(other_msg)
+            && other_msg.content.is_APIResponse()
+            && resp_msg.get_resp_id() === other_msg.get_resp_id()
+            ==> resp_msg === other_msg
+    }
+}
+
+pub open spec fn req_and_resp_match_each_other_exclusively<T>(resp_msg: Message, req_msg: Message, cr_key: ResourceKey) -> StatePred<State<T>>
+    recommends
+        cr_key.kind.is_CustomResourceKind(),
+{
+    |s: State<T>| {
+        s.reconcile_state_contains(cr_key)
+        && s.reconcile_state_of(cr_key).pending_req_msg === Option::Some(req_msg)
+        && resp_msg_matches_req_msg(resp_msg, req_msg)
+        ==> (
+            forall |other_key: ResourceKey|
+                #[trigger] s.reconcile_state_contains(other_key)
+                && s.reconcile_state_of(other_key).pending_req_msg.is_Some()
+                && other_key !== cr_key
+                ==> !resp_msg_matches_req_msg(resp_msg, s.reconcile_state_of(other_key).pending_req_msg.get_Some_0())
+            )
+            && (
+                forall |other_msg: Message|
+                    #[trigger] s.message_in_flight(other_msg)
+                    && other_msg !== resp_msg
+                    ==> !resp_msg_matches_req_msg(other_msg, req_msg)
+            )
+    }
+}
+
+#[verifier(external_body)]
+pub proof fn lemma_always_req_and_resp_match_each_other_exclusively<T>(reconciler: Reconciler<T>, resp_msg: Message, req_msg: Message, cr_key: ResourceKey)
+    requires
+        cr_key.kind.is_CustomResourceKind(),
+    ensures
+        sm_spec(reconciler).entails(always(lift_state(req_and_resp_match_each_other_exclusively(resp_msg, req_msg, cr_key)))),
+{}
+
 pub open spec fn pending_req_has_lower_req_id<T>() -> StatePred<State<T>> {
     |s: State<T>| {
         forall |cr_key: ResourceKey|
