@@ -71,11 +71,18 @@ pub open spec fn reconcile_core(cr_key: ResourceKey, resp_o: Option<APIResponse>
         let req_o = Option::Some(APIRequest::GetRequest(GetRequest{key: cr_key}));
         (state_prime, req_o)
     } else if pc == after_get_cr_pc() {
-        let state_prime = SimpleReconcileState {
-            reconcile_pc: after_create_cm_pc(),
-        };
-        let req_o = Option::Some(create_cm_req(cr_key));
-        (state_prime, req_o)
+        if resp_o.is_Some() && is_ok_resp(resp_o.get_Some_0()) {
+            let state_prime = SimpleReconcileState {
+                reconcile_pc: after_create_cm_pc(),
+            };
+            let req_o = Option::Some(create_cm_req(cr_key));
+            (state_prime, req_o)
+        } else {
+            let state_prime = SimpleReconcileState {
+                reconcile_pc: error_pc(),
+            };
+            (state_prime, Option::None)
+        }
     } else {
         (state, Option::None)
     }
@@ -96,6 +103,8 @@ pub open spec fn init_pc() -> nat { 0 }
 pub open spec fn after_get_cr_pc() -> nat { 1 }
 
 pub open spec fn after_create_cm_pc() -> nat { 2 }
+
+pub open spec fn error_pc() -> nat { 3 }
 
 pub open spec fn subresource_configmap(cr_key: ResourceKey) -> ResourceObj
     recommends
