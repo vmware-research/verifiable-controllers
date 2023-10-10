@@ -4,6 +4,7 @@
 use crate::external_api::exec::*;
 use crate::kubernetes_api_objects::{api_method::*, common::*, dynamic::*, error::*, resource::*};
 use crate::reconciler::exec::{io::*, reconciler::*};
+use crate::reconciler::spec::reconciler as reconciler_spec;
 use crate::shim_layer::fault_injection::*;
 use crate::vstd_ext::to_view::*;
 use builtin::*;
@@ -40,23 +41,25 @@ verus! {
 // ReconcilerType: the reconciler type
 // ReconcileStateType: the local state of the reconciler
 #[verifier(external)]
-pub async fn run_controller<K, ResourceWrapperType, ReconcilerType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>(fault_injection: bool) -> Result<()>
+pub async fn run_controller<ReconcilerViewType, K, ResourceWrapperType, ReconcilerType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>(fault_injection: bool) -> Result<()>
 where
     K: Clone + Resource<Scope = NamespaceResourceScope> + CustomResourceExt + DeserializeOwned + Debug + Send + Serialize + Sync + 'static,
     K::DynamicType: Default + Eq + Hash + Clone + Debug + Unpin,
-    ResourceWrapperType: ResourceWrapper<K> + Send,
-    ReconcilerType: Reconciler<ResourceWrapperType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType> + Send + Sync + Default,
-    ReconcileStateType: Send,
+    ResourceWrapperType: ResourceWrapper<K> + Send + View,
+    ReconcilerType: Reconciler<ReconcilerViewType, ResourceWrapperType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType> + Send + Sync + Default,
+    ReconcileStateType: Send + View,
     ExternalAPIInputType: Send + ToView,
     ExternalAPIOutputType: Send + ToView,
     ExternalAPIShimLayerType: ExternalAPIShimLayer<ExternalAPIInputType, ExternalAPIOutputType>,
+    <ResourceWrapperType as View>::V: ResourceView,
+    ReconcilerViewType: reconciler_spec::Reconciler<<ResourceWrapperType as View>::V, <ReconcileStateType as View>::V, <ExternalAPIInputType as ToView>::V, <ExternalAPIOutputType as ToView>::V>
 {
     let client = Client::try_default().await?;
     let crs = Api::<K>::all(client.clone());
 
     // Build the async closure on top of reconcile_with
     let reconcile = |cr: Arc<K>, ctx: Arc<Data>| async move {
-        return reconcile_with::<K, ResourceWrapperType, ReconcilerType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>(
+        return reconcile_with::<ReconcilerViewType, K, ResourceWrapperType, ReconcilerType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>(
             &ReconcilerType::default(), cr, ctx, fault_injection
         ).await;
     };
@@ -86,17 +89,20 @@ where
 // It ends the loop when the reconciler reports the reconcile is done (reconciler.reconcile_done)
 // or encounters error (reconciler.reconcile_error).
 #[verifier(external)]
-pub async fn reconcile_with<K, ResourceWrapperType, ReconcilerType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>(
+pub async fn reconcile_with<ReconcilerViewType, K, ResourceWrapperType, ReconcilerType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>(
     reconciler: &ReconcilerType, cr: Arc<K>, ctx: Arc<Data>, fault_injection: bool
 ) -> Result<Action, Error>
 where
     K: Clone + Resource<Scope = NamespaceResourceScope> + CustomResourceExt + DeserializeOwned + Debug + Serialize,
     K::DynamicType: Default + Clone + Debug,
-    ResourceWrapperType: ResourceWrapper<K>,
-    ReconcilerType: Reconciler<ResourceWrapperType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>,
+    ResourceWrapperType: ResourceWrapper<K> + View,
+    ReconcilerType: Reconciler<ReconcilerViewType, ResourceWrapperType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>,
+    ReconcileStateType: View,
     ExternalAPIInputType: ToView,
     ExternalAPIOutputType: ToView,
     ExternalAPIShimLayerType: ExternalAPIShimLayer<ExternalAPIInputType, ExternalAPIOutputType>,
+    <ResourceWrapperType as View>::V: ResourceView,
+    ReconcilerViewType: reconciler_spec::Reconciler<<ResourceWrapperType as View>::V, <ReconcileStateType as View>::V, <ExternalAPIInputType as ToView>::V, <ExternalAPIOutputType as ToView>::V>
 {
     let client = &ctx.client;
 
@@ -126,7 +132,7 @@ where
     println!("{} Get cr {}", log_header, deps_hack::k8s_openapi::serde_json::to_string(&cr).unwrap());
 
     let cr_wrapper = ResourceWrapperType::from_kube(cr);
-    let mut state = reconciler.reconcile_init_state();
+    let mut state = ReconcilerType::reconcile_init_state();
     let mut resp_option: Option<Response<ExternalAPIOutputType>> = None;
     // check_fault_timing is only set to true right after the controller issues any create, update or delete request,
     // or external request
@@ -136,16 +142,16 @@ where
     loop {
         check_fault_timing = false;
         // If reconcile core is done, then breaks the loop
-        if reconciler.reconcile_done(&state) {
+        if ReconcilerType::reconcile_done(&state) {
             println!("{} done", log_header);
             break;
         }
-        if reconciler.reconcile_error(&state) {
+        if ReconcilerType::reconcile_error(&state) {
             println!("{} error", log_header);
             return Err(Error::ReconcileCoreError);
         }
         // Feed the current reconcile state and get the new state and the pending request
-        let (state_prime, request_option) = reconciler.reconcile_core(&cr_wrapper, resp_option, state);
+        let (state_prime, request_option) = ReconcilerType::reconcile_core(&cr_wrapper, resp_option, state);
         // Pattern match the request and send requests to the Kubernetes API via kube-rs methods
         match request_option {
             Some(request) => match request {

@@ -2,21 +2,36 @@
 // SPDX-License-Identifier: MIT
 #![allow(unused_imports)]
 use crate::external_api::exec::*;
-use crate::kubernetes_api_objects::{api_method::*, common::*};
+use crate::kubernetes_api_objects::prelude::*;
 use crate::reconciler::exec::io::*;
 use crate::reconciler::spec::io::*;
+use crate::reconciler::spec::reconciler as reconciler_spec;
 use crate::vstd_ext::to_view::*;
 use vstd::prelude::*;
 
 verus! {
 
-pub trait Reconciler<R, T, ExternalAPIInput, ExternalAPIOutput, ExternalAPIType>
-    where ExternalAPIInput: ToView, ExternalAPIOutput: ToView, ExternalAPIType: ExternalAPIShimLayer<ExternalAPIInput, ExternalAPIOutput>
+pub trait Reconciler<ReconcilerViewType, ResourceType, ReconcileStateType, ExternalAPIInput, ExternalAPIOutput, ExternalAPIType>
+    where
+        ResourceType: View,
+        ResourceType::V: ResourceView,
+        ReconcileStateType: View,
+        ExternalAPIInput: ToView,
+        ExternalAPIOutput: ToView,
+        ReconcilerViewType: reconciler_spec::Reconciler<ResourceType::V, ReconcileStateType::V, ExternalAPIInput::V, ExternalAPIOutput::V>,
+        ExternalAPIType: ExternalAPIShimLayer<ExternalAPIInput, ExternalAPIOutput>
 {
-    fn reconcile_init_state(&self) -> T;
-    fn reconcile_core(&self, cr: &R, resp_o: Option<Response<ExternalAPIOutput>>, state: T) -> (T, Option<Request<ExternalAPIInput>>);
-    fn reconcile_done(&self, state: &T) -> bool;
-    fn reconcile_error(&self, state: &T) -> bool;
+    fn reconcile_init_state() -> (state: ReconcileStateType)
+        ensures ReconcilerViewType::reconcile_init_state() == state@;
+
+    fn reconcile_core(cr: &ResourceType, resp_o: Option<Response<ExternalAPIOutput>>, state: ReconcileStateType) -> (res: (ReconcileStateType, Option<Request<ExternalAPIInput>>))
+        ensures ReconcilerViewType::reconcile_core(cr@, opt_response_to_view(&resp_o), state@) == (res.0@, opt_request_to_view(&res.1));
+
+    fn reconcile_done(state: &ReconcileStateType) -> (res: bool)
+        ensures ReconcilerViewType::reconcile_done(state@) == res;
+
+    fn reconcile_error(state: &ReconcileStateType) -> (res: bool)
+        ensures ReconcilerViewType::reconcile_done(state@) == res;
 }
 
 pub open spec fn resource_version_check<I, O>(prev_resp_opt: Option<ResponseView<O>>, cur_req_opt: Option<RequestView<I>>) -> bool {
