@@ -28,35 +28,6 @@ pub open spec fn zookeeper_is_well_formed(zookeeper: ZookeeperClusterView) -> St
     |s: ZKCluster| zookeeper.well_formed()
 }
 
-pub open spec fn the_object_in_reconcile_satisfies_state_validation(key: ObjectRef) -> StatePred<ZKCluster>
-{
-    |s: ZKCluster| {
-        s.ongoing_reconciles().contains_key(key)
-        ==> s.ongoing_reconciles()[key].triggering_cr.state_validation()
-    }
-}
-
-pub open spec fn the_object_in_schedule_satisfies_state_validation() -> StatePred<ZKCluster>
-{
-    |s: ZKCluster| {
-        forall |key: ObjectRef|
-        #[trigger] s.scheduled_reconciles().contains_key(key)
-        && key.kind.is_CustomResourceKind()
-        ==> s.scheduled_reconciles()[key].state_validation()
-    }
-}
-
-pub open spec fn cr_objects_in_etcd_satisfy_state_validation() -> StatePred<ZKCluster>
-{
-    |s: ZKCluster| {
-        forall |key: ObjectRef|
-        #[trigger] s.resources().contains_key(key)
-        && key.kind.is_CustomResourceKind()
-        ==> ZookeeperClusterView::unmarshal(s.resources()[key]).is_Ok()
-            && ZookeeperClusterView::unmarshal(s.resources()[key]).get_Ok_0().state_validation()
-    }
-}
-
 pub open spec fn resource_object_has_no_finalizers_or_timestamp_and_only_has_controller_owner_ref(sub_resource: SubResource, zookeeper: ZookeeperClusterView) -> StatePred<ZKCluster> {
     let key = get_request(sub_resource, zookeeper).key;
     |s: ZKCluster| {
@@ -74,42 +45,6 @@ pub open spec fn resource_object_has_no_finalizers_or_timestamp_and_only_has_con
     }
 }
 
-pub open spec fn resource_get_response_msg(key: ObjectRef) -> FnSpec(ZKMessage) -> bool {
-    |msg: ZKMessage|
-        msg.src.is_KubernetesAPI()
-        && msg.content.is_get_response()
-        && (
-            msg.content.get_get_response().res.is_Ok()
-            ==> msg.content.get_get_response().res.get_Ok_0().object_ref() == key
-        )
-}
-
-pub open spec fn resource_update_response_msg(key: ObjectRef, s: ZKCluster) -> FnSpec(ZKMessage) -> bool {
-    |msg: ZKMessage|
-        msg.src.is_KubernetesAPI()
-        && msg.content.is_update_response()
-        && (
-            msg.content.get_update_response().res.is_Ok()
-            ==> (
-                s.resources().contains_key(key)
-                && msg.content.get_update_response().res.get_Ok_0() == s.resources()[key]
-            )
-        )
-}
-
-pub open spec fn resource_create_response_msg(key: ObjectRef, s: ZKCluster) -> FnSpec(ZKMessage) -> bool {
-    |msg: ZKMessage|
-        msg.src.is_KubernetesAPI()
-        && msg.content.is_create_response()
-        && (
-            msg.content.get_create_response().res.is_Ok()
-            ==> (
-                s.resources().contains_key(key)
-                && msg.content.get_create_response().res.get_Ok_0() == s.resources()[key]
-            )
-        )
-}
-
 pub open spec fn response_at_after_get_resource_step_is_resource_get_response(
     sub_resource: SubResource, zookeeper: ZookeeperClusterView
 ) -> StatePred<ZKCluster> {
@@ -123,7 +58,7 @@ pub open spec fn response_at_after_get_resource_step_is_resource_get_response(
                 forall |msg: ZKMessage|
                     #[trigger] s.in_flight().contains(msg)
                     && Message::resp_msg_matches_req_msg(msg, s.ongoing_reconciles()[key].pending_req_msg.get_Some_0())
-                    ==> resource_get_response_msg(resource_key)(msg)
+                    ==> ZKCluster::resource_get_response_msg(resource_key)(msg)
             )
     }
 }
@@ -143,7 +78,7 @@ pub open spec fn object_in_response_at_after_update_resource_step_is_same_as_etc
                 forall |msg: ZKMessage|
                     #[trigger] s.in_flight().contains(msg)
                     && Message::resp_msg_matches_req_msg(msg, s.ongoing_reconciles()[key].pending_req_msg.get_Some_0())
-                    ==> resource_update_response_msg(resource_key, s)(msg)
+                    ==> ZKCluster::resource_update_response_msg(resource_key, s)(msg)
             )
     }
 }
@@ -163,7 +98,7 @@ pub open spec fn object_in_response_at_after_create_resource_step_is_same_as_etc
                 forall |msg: ZKMessage|
                     #[trigger] s.in_flight().contains(msg)
                     && Message::resp_msg_matches_req_msg(msg, s.ongoing_reconciles()[key].pending_req_msg.get_Some_0())
-                    ==> resource_create_response_msg(resource_key, s)(msg)
+                    ==> ZKCluster::resource_create_response_msg(resource_key, s)(msg)
             )
     }
 }

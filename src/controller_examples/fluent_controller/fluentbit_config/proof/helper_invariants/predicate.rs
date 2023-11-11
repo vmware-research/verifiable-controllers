@@ -28,35 +28,6 @@ pub open spec fn fbc_is_well_formed(fbc: FluentBitConfigView) -> StatePred<FBCCl
     |s: FBCCluster| fbc.well_formed()
 }
 
-pub open spec fn the_object_in_reconcile_satisfies_state_validation(key: ObjectRef) -> StatePred<FBCCluster>
-{
-    |s: FBCCluster| {
-        s.ongoing_reconciles().contains_key(key)
-        ==> s.ongoing_reconciles()[key].triggering_cr.state_validation()
-    }
-}
-
-pub open spec fn the_object_in_schedule_satisfies_state_validation() -> StatePred<FBCCluster>
-{
-    |s: FBCCluster| {
-        forall |key: ObjectRef|
-        #[trigger] s.scheduled_reconciles().contains_key(key)
-        && key.kind.is_CustomResourceKind()
-        ==> s.scheduled_reconciles()[key].state_validation()
-    }
-}
-
-pub open spec fn cr_objects_in_etcd_satisfy_state_validation() -> StatePred<FBCCluster>
-{
-    |s: FBCCluster| {
-        forall |key: ObjectRef|
-        #[trigger] s.resources().contains_key(key)
-        && key.kind.is_CustomResourceKind()
-        ==> FluentBitConfigView::unmarshal(s.resources()[key]).is_Ok()
-            && FluentBitConfigView::unmarshal(s.resources()[key]).get_Ok_0().state_validation()
-    }
-}
-
 pub open spec fn resource_object_has_no_finalizers_or_timestamp_and_only_has_controller_owner_ref(sub_resource: SubResource, fbc: FluentBitConfigView) -> StatePred<FBCCluster> {
     let key = get_request(sub_resource, fbc).key;
     |s: FBCCluster| {
@@ -74,42 +45,6 @@ pub open spec fn resource_object_has_no_finalizers_or_timestamp_and_only_has_con
     }
 }
 
-pub open spec fn resource_get_response_msg(key: ObjectRef) -> FnSpec(FBCMessage) -> bool {
-    |msg: FBCMessage|
-        msg.src.is_KubernetesAPI()
-        && msg.content.is_get_response()
-        && (
-            msg.content.get_get_response().res.is_Ok()
-            ==> msg.content.get_get_response().res.get_Ok_0().object_ref() == key
-        )
-}
-
-pub open spec fn resource_update_response_msg(key: ObjectRef, s: FBCCluster) -> FnSpec(FBCMessage) -> bool {
-    |msg: FBCMessage|
-        msg.src.is_KubernetesAPI()
-        && msg.content.is_update_response()
-        && (
-            msg.content.get_update_response().res.is_Ok()
-            ==> (
-                s.resources().contains_key(key)
-                && msg.content.get_update_response().res.get_Ok_0() == s.resources()[key]
-            )
-        )
-}
-
-pub open spec fn resource_create_response_msg(key: ObjectRef, s: FBCCluster) -> FnSpec(FBCMessage) -> bool {
-    |msg: FBCMessage|
-        msg.src.is_KubernetesAPI()
-        && msg.content.is_create_response()
-        && (
-            msg.content.get_create_response().res.is_Ok()
-            ==> (
-                s.resources().contains_key(key)
-                && msg.content.get_create_response().res.get_Ok_0() == s.resources()[key]
-            )
-        )
-}
-
 pub open spec fn response_at_after_get_resource_step_is_resource_get_response(
     sub_resource: SubResource, fbc: FluentBitConfigView
 ) -> StatePred<FBCCluster> {
@@ -123,7 +58,7 @@ pub open spec fn response_at_after_get_resource_step_is_resource_get_response(
                 forall |msg: FBCMessage|
                     #[trigger] s.in_flight().contains(msg)
                     && Message::resp_msg_matches_req_msg(msg, s.ongoing_reconciles()[key].pending_req_msg.get_Some_0())
-                    ==> resource_get_response_msg(resource_key)(msg)
+                    ==> FBCCluster::resource_get_response_msg(resource_key)(msg)
             )
     }
 }

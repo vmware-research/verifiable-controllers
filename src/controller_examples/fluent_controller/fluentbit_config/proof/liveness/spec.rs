@@ -203,7 +203,7 @@ pub open spec fn derived_invariants_since_beginning(fbc: FluentBitConfigView) ->
     .and(always(lift_state(FBCCluster::no_pending_req_msg_at_reconcile_state(fbc.object_ref(), at_step_closure(FluentBitConfigReconcileStep::Init)))))
     .and(always(tla_forall(|step: (ActionKind, SubResource)| lift_state(FBCCluster::pending_req_in_flight_or_resp_in_flight_at_reconcile_state(fbc.object_ref(), at_step_closure(FluentBitConfigReconcileStep::AfterKRequestStep(step.0, step.1)))))))
     .and(always(tla_forall(|res: SubResource| lift_state(helper_invariants::no_update_status_request_msg_in_flight(res, fbc)))))
-    .and(always(lift_state(helper_invariants::the_object_in_reconcile_satisfies_state_validation(fbc.object_ref()))))
+    .and(always(lift_state(FBCCluster::the_object_in_reconcile_satisfies_state_validation(fbc.object_ref()))))
     .and(always(lift_state(FBCCluster::key_of_object_in_matched_ok_get_resp_message_is_same_as_key_of_pending_req(fbc.object_ref()))))
     .and(always(lift_state(FBCCluster::key_of_object_in_matched_ok_create_resp_message_is_same_as_key_of_pending_req(fbc.object_ref()))))
     .and(always(lift_state(FBCCluster::key_of_object_in_matched_ok_update_resp_message_is_same_as_key_of_pending_req(fbc.object_ref()))))
@@ -233,7 +233,7 @@ pub proof fn derived_invariants_since_beginning_is_stable(fbc: FluentBitConfigVi
         lift_state(FBCCluster::no_pending_req_msg_at_reconcile_state(fbc.object_ref(), at_step_closure(FluentBitConfigReconcileStep::Init))),
         tla_forall(a_to_p_2),
         tla_forall(a_to_p_3),
-        lift_state(helper_invariants::the_object_in_reconcile_satisfies_state_validation(fbc.object_ref())),
+        lift_state(FBCCluster::the_object_in_reconcile_satisfies_state_validation(fbc.object_ref())),
         lift_state(FBCCluster::key_of_object_in_matched_ok_get_resp_message_is_same_as_key_of_pending_req(fbc.object_ref())),
         lift_state(FBCCluster::key_of_object_in_matched_ok_create_resp_message_is_same_as_key_of_pending_req(fbc.object_ref())),
         lift_state(FBCCluster::key_of_object_in_matched_ok_update_resp_message_is_same_as_key_of_pending_req(fbc.object_ref())),
@@ -389,7 +389,8 @@ pub proof fn sm_spec_entails_all_invariants(fbc: FluentBitConfigView)
         }
         spec_entails_always_tla_forall(spec, a_to_p_3);
     });
-    helper_invariants::lemma_always_the_object_in_reconcile_satisfies_state_validation(spec, fbc.object_ref());
+    helper_invariants::lemma_always_cr_objects_in_etcd_satisfy_state_validation(spec);
+    FBCCluster::lemma_always_the_object_in_reconcile_satisfies_state_validation(spec, fbc.object_ref());
     FBCCluster::lemma_always_key_of_object_in_matched_ok_get_resp_message_is_same_as_key_of_pending_req(spec, fbc.object_ref());
     FBCCluster::lemma_always_key_of_object_in_matched_ok_create_resp_message_is_same_as_key_of_pending_req(spec, fbc.object_ref());
     FBCCluster::lemma_always_key_of_object_in_matched_ok_update_resp_message_is_same_as_key_of_pending_req(spec, fbc.object_ref());
@@ -422,7 +423,7 @@ pub proof fn sm_spec_entails_all_invariants(fbc: FluentBitConfigView)
         lift_state(FBCCluster::no_pending_req_msg_at_reconcile_state(fbc.object_ref(), at_step_closure(FluentBitConfigReconcileStep::Init))),
         tla_forall(a_to_p_2),
         tla_forall(a_to_p_3),
-        lift_state(helper_invariants::the_object_in_reconcile_satisfies_state_validation(fbc.object_ref())),
+        lift_state(FBCCluster::the_object_in_reconcile_satisfies_state_validation(fbc.object_ref())),
         lift_state(FBCCluster::key_of_object_in_matched_ok_get_resp_message_is_same_as_key_of_pending_req(fbc.object_ref())),
         lift_state(FBCCluster::key_of_object_in_matched_ok_create_resp_message_is_same_as_key_of_pending_req(fbc.object_ref())),
         lift_state(FBCCluster::key_of_object_in_matched_ok_update_resp_message_is_same_as_key_of_pending_req(fbc.object_ref())),

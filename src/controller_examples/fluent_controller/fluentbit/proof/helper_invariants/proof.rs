@@ -50,53 +50,11 @@ pub proof fn lemma_always_cr_objects_in_etcd_satisfy_state_validation(spec: Temp
         spec.entails(lift_state(FBCluster::init())),
         spec.entails(always(lift_action(FBCluster::next()))),
     ensures
-        spec.entails(always(lift_state(cr_objects_in_etcd_satisfy_state_validation()))),
+        spec.entails(always(lift_state(FBCluster::cr_objects_in_etcd_satisfy_state_validation()))),
 {
-    let inv = cr_objects_in_etcd_satisfy_state_validation();
+    let inv = FBCluster::cr_objects_in_etcd_satisfy_state_validation();
     FluentBitView::marshal_status_preserves_integrity();
     init_invariant(spec, FBCluster::init(), FBCluster::next(), inv);
-}
-
-pub proof fn lemma_always_the_object_in_schedule_satisfies_state_validation(spec: TempPred<FBCluster>)
-    requires
-        spec.entails(lift_state(FBCluster::init())),
-        spec.entails(always(lift_action(FBCluster::next()))),
-    ensures
-        spec.entails(always(lift_state(the_object_in_schedule_satisfies_state_validation()))),
-{
-    let inv = the_object_in_schedule_satisfies_state_validation();
-    let stronger_next = |s: FBCluster, s_prime: FBCluster| {
-        &&& FBCluster::next()(s, s_prime)
-        &&& cr_objects_in_etcd_satisfy_state_validation()(s)
-    };
-    lemma_always_cr_objects_in_etcd_satisfy_state_validation(spec);
-    combine_spec_entails_always_n!(
-        spec, lift_action(stronger_next),
-        lift_action(FBCluster::next()),
-        lift_state(cr_objects_in_etcd_satisfy_state_validation())
-    );
-    init_invariant(spec, FBCluster::init(), stronger_next, inv);
-}
-
-pub proof fn lemma_always_the_object_in_reconcile_satisfies_state_validation(spec: TempPred<FBCluster>, key: ObjectRef)
-    requires
-        spec.entails(lift_state(FBCluster::init())),
-        spec.entails(always(lift_action(FBCluster::next()))),
-    ensures
-        spec.entails(always(lift_state(the_object_in_reconcile_satisfies_state_validation(key)))),
-{
-    let inv = the_object_in_reconcile_satisfies_state_validation(key);
-    let stronger_next = |s: FBCluster, s_prime: FBCluster| {
-        &&& FBCluster::next()(s, s_prime)
-        &&& the_object_in_schedule_satisfies_state_validation()(s)
-    };
-    lemma_always_the_object_in_schedule_satisfies_state_validation(spec);
-    combine_spec_entails_always_n!(
-        spec, lift_action(stronger_next),
-        lift_action(FBCluster::next()),
-        lift_state(the_object_in_schedule_satisfies_state_validation())
-    );
-    init_invariant(spec, FBCluster::init(), stronger_next, inv);
 }
 
 #[verifier(spinoff_prover)]
