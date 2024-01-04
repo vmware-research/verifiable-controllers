@@ -40,23 +40,22 @@ verus! {
 // ReconcilerType: the reconciler type
 // ReconcileStateType: the local state of the reconciler
 #[verifier(external)]
-pub async fn run_controller<K, ResourceWrapperType, ReconcilerType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>(fault_injection: bool) -> Result<()>
+pub async fn run_controller<K, ResourceWrapperType, ReconcilerType, ReconcileStateType>(fault_injection: bool) -> Result<()>
 where
     K: Clone + Resource<Scope = NamespaceResourceScope> + CustomResourceExt + DeserializeOwned + Debug + Send + Serialize + Sync + 'static,
     K::DynamicType: Default + Eq + Hash + Clone + Debug + Unpin,
     ResourceWrapperType: ResourceWrapper<K> + Send,
-    ReconcilerType: Reconciler<ResourceWrapperType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType> + Send + Sync + Default,
+    ReconcilerType: Reconciler<R = ResourceWrapperType, T = ReconcileStateType> + Send + Sync + Default,
     ReconcileStateType: Send,
-    ExternalAPIInputType: Send + View,
-    ExternalAPIOutputType: Send + View,
-    ExternalAPIShimLayerType: ExternalAPIShimLayer<ExternalAPIInputType, ExternalAPIOutputType>,
+    <ReconcilerType::ExternalAPI as ExternalAPIShimLayer>::Input: Send,
+    <ReconcilerType::ExternalAPI as ExternalAPIShimLayer>::Output: Send,
 {
     let client = Client::try_default().await?;
     let crs = Api::<K>::all(client.clone());
 
     // Build the async closure on top of reconcile_with
     let reconcile = |cr: Arc<K>, ctx: Arc<Data>| async move {
-        return reconcile_with::<K, ResourceWrapperType, ReconcilerType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>(
+        return reconcile_with::<K, ResourceWrapperType, ReconcilerType, ReconcileStateType>(
             cr, ctx, fault_injection
         ).await;
     };
@@ -86,17 +85,16 @@ where
 // It ends the loop when the ReconcilerType reports the reconcile is done (ReconcilerType::reconcile_done)
 // or encounters error (ReconcilerType::reconcile_error).
 #[verifier(external)]
-pub async fn reconcile_with<K, ResourceWrapperType, ReconcilerType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>(
+pub async fn reconcile_with<K, ResourceWrapperType, ReconcilerType, ReconcileStateType>(
     cr: Arc<K>, ctx: Arc<Data>, fault_injection: bool
 ) -> Result<Action, Error>
 where
     K: Clone + Resource<Scope = NamespaceResourceScope> + CustomResourceExt + DeserializeOwned + Debug + Serialize,
     K::DynamicType: Default + Clone + Debug,
     ResourceWrapperType: ResourceWrapper<K>,
-    ReconcilerType: Reconciler<ResourceWrapperType, ReconcileStateType, ExternalAPIInputType, ExternalAPIOutputType, ExternalAPIShimLayerType>,
-    ExternalAPIInputType: View,
-    ExternalAPIOutputType: View,
-    ExternalAPIShimLayerType: ExternalAPIShimLayer<ExternalAPIInputType, ExternalAPIOutputType>,
+    ReconcilerType: Reconciler<R = ResourceWrapperType, T = ReconcileStateType>,
+    <ReconcilerType::ExternalAPI as ExternalAPIShimLayer>::Input: Send,
+    <ReconcilerType::ExternalAPI as ExternalAPIShimLayer>::Output: Send,
 {
     let client = &ctx.client;
 
@@ -127,7 +125,7 @@ where
 
     let cr_wrapper = ResourceWrapperType::from_kube(cr);
     let mut state = ReconcilerType::reconcile_init_state();
-    let mut resp_option: Option<Response<ExternalAPIOutputType>> = None;
+    let mut resp_option: Option<Response<<ReconcilerType::ExternalAPI as ExternalAPIShimLayer>::Output>> = None;
     // check_fault_timing is only set to true right after the controller issues any create, update or delete request,
     // or external request
     let mut check_fault_timing: bool;
@@ -290,7 +288,7 @@ where
                 },
                 Request::ExternalRequest(req) => {
                     check_fault_timing = true;
-                    let external_resp = ExternalAPIShimLayerType::call_external_api(req);
+                    let external_resp = <ReconcilerType::ExternalAPI as ExternalAPIShimLayer>::call_external_api(req);
                     resp_option = Some(Response::ExternalResponse(external_resp));
                 },
             },

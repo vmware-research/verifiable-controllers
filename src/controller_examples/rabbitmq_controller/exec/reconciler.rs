@@ -24,22 +24,26 @@ verus! {
 
 pub struct RabbitmqReconciler {}
 
-impl Reconciler<RabbitmqCluster, RabbitmqReconcileState, EmptyType, EmptyType, EmptyAPIShimLayer> for RabbitmqReconciler {
-    open spec fn well_formed(rabbitmq: &RabbitmqCluster) -> bool { rabbitmq@.well_formed() }
+impl Reconciler for RabbitmqReconciler {
+    type R = RabbitmqCluster;
+    type T = RabbitmqReconcileState;
+    type ExternalAPI = EmptyAPIShimLayer;
 
-    fn reconcile_init_state() -> RabbitmqReconcileState {
+    open spec fn well_formed(rabbitmq: &Self::R) -> bool { rabbitmq@.well_formed() }
+
+    fn reconcile_init_state() -> Self::T {
         reconcile_init_state()
     }
 
-    fn reconcile_core(rabbitmq: &RabbitmqCluster, resp_o: Option<Response<EmptyType>>, state: RabbitmqReconcileState) -> (RabbitmqReconcileState, Option<Request<EmptyType>>) {
+    fn reconcile_core(rabbitmq: &Self::R, resp_o: Option<Response<<Self::ExternalAPI as ExternalAPIShimLayer>::Output>>, state: Self::T) -> (Self::T, Option<Request<<Self::ExternalAPI as ExternalAPIShimLayer>::Input>>) {
         reconcile_core(rabbitmq, resp_o, state)
     }
 
-    fn reconcile_done(state: &RabbitmqReconcileState) -> bool {
+    fn reconcile_done(state: &Self::T) -> bool {
         reconcile_done(state)
     }
 
-    fn reconcile_error(state: &RabbitmqReconcileState) -> bool {
+    fn reconcile_error(state: &Self::T) -> bool {
         reconcile_error(state)
     }
 }
