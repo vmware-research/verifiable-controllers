@@ -166,8 +166,8 @@ pub open spec fn handle_list_request(req: ListRequest, s: ApiServerState) -> Lis
 }
 
 pub open spec fn create_request_admission_check<K: CustomResourceView>(req: CreateRequest, s: ApiServerState) -> Option<APIError> {
-    if req.obj.metadata.name.is_None() {
-        // Creation fails because the name of the provided object is not provided
+    if req.obj.metadata.name.is_None() && req.obj.metadata.generate_name.is_None() {
+        // Creation fails because neither the name nor the generate_name of the provided object is provided
         Some(APIError::Invalid)
     } else if req.obj.metadata.namespace.is_Some() && req.namespace != req.obj.metadata.namespace.get_Some_0() {
         // Creation fails because the namespace of the provided object does not match the namespace sent on the request
@@ -175,8 +175,8 @@ pub open spec fn create_request_admission_check<K: CustomResourceView>(req: Crea
     } else if !unmarshallable_object::<K>(req.obj) {
         // Creation fails because the provided object is not well formed
         Some(APIError::BadRequest) // TODO: should the error be BadRequest?
-    } else if s.resources.contains_key(req.obj.set_namespace(req.namespace).object_ref()) {
-        // Creation fails because the object already exists
+    } else if req.obj.metadata.name.is_Some() && s.resources.contains_key(req.obj.set_namespace(req.namespace).object_ref()) {
+        // Creation fails because the object has a name and it already exists
         Some(APIError::ObjectAlreadyExists)
     } else {
         None
@@ -193,6 +193,14 @@ pub open spec fn created_object_validity_check<K: CustomResourceView>(created_ob
     }
 }
 
+pub closed spec fn generate_name(s: ApiServerState) -> StringView;
+
+// TODO: This should be a spec ensures of the generate_name above
+#[verifier(external_body)]
+pub proof fn generated_name_is_unique(s: ApiServerState)
+    ensures forall |key| #[trigger] s.resources.contains_key(key) ==> key.name != generate_name(s)
+{}
+
 #[verifier(inline)]
 pub open spec fn handle_create_request<K: CustomResourceView>(req: CreateRequest, s: ApiServerState) -> (ApiServerState, CreateResponse) {
     if create_request_admission_check::<K>(req, s).is_Some() {
@@ -202,6 +210,11 @@ pub open spec fn handle_create_request<K: CustomResourceView>(req: CreateRequest
         let created_obj = DynamicObjectView {
             kind: req.obj.kind,
             metadata: ObjectMetaView {
+                name: if req.obj.metadata.name.is_Some() {
+                    req.obj.metadata.name
+                } else {
+                    Some(generate_name(s))
+                },
                 namespace: Some(req.namespace), // Set namespace for new object
                 resource_version: Some(s.resource_version_counter), // Set rv for new object
                 uid: Some(s.uid_counter), // Set uid for new object
